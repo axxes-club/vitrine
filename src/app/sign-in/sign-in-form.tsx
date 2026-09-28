@@ -15,7 +15,8 @@ export function SignInForm() {
     setBusy(true);
     setError(null);
     const { error } = await authClient.signIn.email({
-      email,
+      // Stored lowercased; fold the input so Me.com still matches me.com.
+      email: email.trim().toLowerCase(),
       password,
       callbackURL: "/admin",
     });
