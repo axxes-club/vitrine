@@ -1,0 +1,53 @@
+:root {
+  --background: #fdfcfc; /* pristine warm gallery white */
+  --foreground: #111111;
+  --muted: #6b6b6b;
+  --line: rgba(17, 17, 17, 0.12);
+  --accent: #8a7a5c; /* quiet brass */
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+::selection {
+  background-color: #111111;
+  color: #fdfcfc;
+}
+
+.serif {
+  font-family: var(--font-serif);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+}
+
+.overline {
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.rule {
+  border: 0;
+  border-top: 1px solid var(--line);
+}
