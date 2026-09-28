@@ -28,6 +28,22 @@ export const HANDSHAKE_URL = process.env.HANDSHAKE_URL?.replace(/\/$/, "") || nu
 export const COLLECTION_TENANT_SLUG =
   process.env.VITRINE_TENANT_SLUG || "coleccion-reyes-veray";
 
+/**
+ * Organizations whose membership is enough to reach the desk, on top of a seat
+ * in the collection itself.
+ *
+ * AXXES CLUB is here because it is the company: anyone on the company roster
+ * can open the desk without also being added to the collection's private
+ * workspace. Matched by name rather than slug, because that org's slug was
+ * generated when the workspace was created and is not something to hardcode.
+ */
+export const ENTRY_ORG_NAMES: string[] = (
+  process.env.VITRINE_ENTRY_ORGS || "AXXES CLUB"
+)
+  .split(",")
+  .map((n) => n.trim())
+  .filter(Boolean);
+
 export const auth = betterAuth({
   baseURL,
   secret: process.env.BETTER_AUTH_SECRET,

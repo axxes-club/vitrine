@@ -66,6 +66,9 @@ export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
+  // Mapped from the shared table so a retired organization stops being an
+  // entry route. Vitrine reads the same rows every other AXXES app does.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export const tenantMemberships = pgTable(
@@ -76,6 +79,9 @@ export const tenantMemberships = pgTable(
     userId: text("user_id").notNull(),
     role: text("role").notNull().default("member"),
     isPrimary: boolean("is_primary").default(true),
+    // A membership can be retired rather than deleted; an old one must not
+    // keep granting access to the desk.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   t => [uniqueIndex("vitrine_memberships_tenant_user_idx").on(t.tenantId, t.userId)]

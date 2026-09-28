@@ -63,10 +63,11 @@ export function AwaitingAccess({ name, email }: { name?: string; email?: string 
           ) : (
             <>Your AXXES account is working correctly.</>
           )}{" "}
-          The Desk is only open to the collection&rsquo;s own team &mdash; the
-          people who look after the objects, photograph the works and manage
-          the records. Access is added by an existing owner, and it takes effect
-          the moment they save.
+          The Desk is open to the collection&rsquo;s own team, and to anyone on
+          the AXXES CLUB roster &mdash; the people who look after the objects,
+          photograph the works and manage the records. If you should be able to
+          get in, ask an existing owner to add you to AXXES CLUB, and it takes
+          effect the moment they save.
         </p>
 
         <div

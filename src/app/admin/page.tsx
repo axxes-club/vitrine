@@ -82,6 +82,7 @@ export default async function AdminPage() {
         <p className="serif" style={{ marginTop: "0.8rem", color: "var(--muted)", fontSize: "1.1rem" }}>
           Signed in as {ctx.user.email} · {ctx.role}
           {canEdit(ctx.role) ? "" : " (read-only)"}
+          {ctx.viaOrg && ctx.viaOrg !== ctx.tenant.name ? ` · via ${ctx.viaOrg}` : ""}
         </p>
       </section>
 
