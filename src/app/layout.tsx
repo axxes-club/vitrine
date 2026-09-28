@@ -18,7 +18,7 @@ const display = Syncopate({
 export const metadata: Metadata = {
   title: "Vitrine — Every collection deserves a vitrine.",
   description:
-    "The private-archive standard for serious art collections. Provenance, condition, and legacy — kept in one quiet room. Invite-only.",
+    "The administrator's desk for serious art collections. Provenance, condition, legacy — kept in one quiet room, published to the web only when you choose. Invite-only.",
   openGraph: {
     title: "Vitrine",
     description: "Every collection deserves a vitrine.",

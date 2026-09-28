@@ -19,13 +19,20 @@ const PILLARS = [
     body:
       "Succession-ready archives for the next steward, the estate, or the institution. Nothing left to chance.",
   },
+  {
+    n: "04",
+    title: "Publish",
+    body:
+      "When you're ready for the world, your collection can step onto the web — published from your Vitrine " +
+      "records through the AXXES web developer app. The archive stays private either way.",
+  },
 ];
 
 const TRUST = [
   "Invite-only",
   "Your records remain yours — exportable, always",
   "Built with museum-standard care",
-  "For collectors, estates & their advisors",
+  "Publish to the web only when you choose",
 ];
 
 export default function Home() {
@@ -81,8 +88,9 @@ export default function Home() {
             color: "var(--muted)",
           }}
         >
-          The private-archive standard for serious art collections — provenance,
-          condition and legacy, kept in one quiet room.
+          The administrator's desk for serious art collections — provenance,
+          condition and legacy, kept in one quiet room. When the world should
+          see it, publish — until then, it stays yours.
         </p>
         <div style={{ marginTop: "3.2rem" }}>
           <a
@@ -116,7 +124,7 @@ export default function Home() {
               gridTemplateColumns: "80px 1fr",
               gap: "2.5rem",
               padding: "3.2rem 0",
-              borderBottom: p.n === "03" ? "none" : "1px solid var(--line)",
+              borderBottom: p.n === "04" ? "none" : "1px solid var(--line)",
             }}
           >
             <span
@@ -238,7 +246,7 @@ export default function Home() {
         }}
       >
         <span className="wordmark" style={{ fontSize: "0.72rem" }}>
-          Vitrine
+          Vitrine by AXXES
         </span>
         <span
           className="serif"
