@@ -1,5 +1,6 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { requireContext, canEdit } from "@/lib/context";
+import { AwaitingAccess } from "@/components/awaiting-access";
 import { db } from "@/lib/db";
 import { products, artworkDetails } from "@/lib/db/schema";
 
@@ -8,6 +9,17 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const ctx = await requireContext();
+
+  // A valid AXXES account with no seat at this collection: show them the door
+  // and who opens it, rather than a desk where every control is inert.
+  if (!ctx.role) {
+    return (
+      <AwaitingAccess
+        name={ctx.user?.name}
+        email={ctx.user?.email}
+      />
+    );
+  }
 
   const [counts] = await db
     .select({
