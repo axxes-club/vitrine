@@ -3,6 +3,20 @@
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
+/**
+ * Whether to show the "Continue with AXXES" button.
+ *
+ * The OAuth provider only exists when Handshake has issued a client secret for
+ * this app. A dev machine that has not been registered with Handshake yet does
+ * not have one, and a button that always fails is worse than no button — it
+ * sends someone to Handshake, who sends them back, and looks like a broken
+ * account. The email-and-password path below always works, so it is the
+ * fallback and the page still does its job.
+ */
+const SSO_AVAILABLE = Boolean(
+  process.env.NEXT_PUBLIC_AXXES_OIDC === "true"
+);
+
 export function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -72,20 +86,24 @@ export function SignInForm() {
 
   return (
     <div style={{ display: "grid", gap: "1.6rem" }}>
-      <button
-        type="button"
-        onClick={withAxxes}
-        disabled={busy !== null}
-        style={{ ...buttonStyle, cursor: busy ? "wait" : "pointer" }}
-      >
-        {busy === "sso" ? "One moment" : "Continue with AXXES"}
-      </button>
+      {SSO_AVAILABLE && (
+        <>
+          <button
+            type="button"
+            onClick={withAxxes}
+            disabled={busy !== null}
+            style={{ ...buttonStyle, cursor: busy ? "wait" : "pointer" }}
+          >
+            {busy === "sso" ? "One moment" : "Continue with AXXES"}
+          </button>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        <hr className="rule" style={{ flex: 1 }} />
-        <span className="overline">or</span>
-        <hr className="rule" style={{ flex: 1 }} />
-      </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <hr className="rule" style={{ flex: 1 }} />
+            <span className="overline">or</span>
+            <hr className="rule" style={{ flex: 1 }} />
+          </div>
+        </>
+      )}
 
       <form onSubmit={onSubmit} style={{ display: "grid", gap: "1.4rem" }}>
         <input

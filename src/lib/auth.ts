@@ -21,8 +21,26 @@ const baseURL =
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : "http://localhost:3000");
 
-// Central AXXES sign-in; when unset the app shows its own sign-in page.
+/**
+ * Central AXXES sign-in; when unset the app shows its own sign-in page.
+ */
 export const HANDSHAKE_URL = process.env.HANDSHAKE_URL?.replace(/\/$/, "") || null;
+
+/**
+ * Whether the "Continue with AXXES" OAuth button is wired up.
+ *
+ * The provider is optional. The shared session cookie is the primary path and
+ * needs nothing but BETTER_AUTH_SECRET; OAuth is the extra door for an account
+ * whose cookie did not come along. Handshake issues a client secret, and
+ * without one the provider has nothing to exchange, so it is left out entirely
+ * rather than registered with an empty secret — which makes discovery fail on
+ * every request that touches the auth config, and because that config is built
+ * at import time, it stalls the first render of anything that signs in.
+ */
+const oidcClientId = process.env.AXXES_OIDC_CLIENT_ID;
+const oidcClientSecret = process.env.AXXES_OIDC_CLIENT_SECRET;
+export const OIDC_ENABLED = Boolean(oidcClientId && oidcClientSecret);
+
 
 // Vitrine is an administrators' application: only people with a membership in
 // a collection organization may enter the desk.
@@ -72,18 +90,23 @@ export const auth = betterAuth({
     // "Continue with AXXES" — Handshake is the suite's identity provider.
     // Discovery + PKCE; claims come from its /userinfo. The shared-cookie path
     // above still works first-party; this opens the door from any host and for
-    // accounts whose cookie did not come along.
-    genericOAuth({
-      config: [
-        {
-          providerId: "axxes",
-          discoveryUrl: `${process.env.HANDSHAKE_URL || "https://handshake.axxes.club"}/api/auth/.well-known/openid-configuration`,
-          clientId: process.env.AXXES_OIDC_CLIENT_ID || "vitrine",
-          clientSecret: process.env.AXXES_OIDC_CLIENT_SECRET,
-          scopes: ["openid", "email", "profile"],
-          pkce: true,
-        },
-      ],
-    }),
+    // accounts whose cookie did not come along. Registered only when Handshake
+    // has issued a client secret — see OIDC_ENABLED.
+    ...(OIDC_ENABLED
+      ? [
+          genericOAuth({
+            config: [
+              {
+                providerId: "axxes" as const,
+                discoveryUrl: `${HANDSHAKE_URL || "https://handshake.axxes.club"}/api/auth/.well-known/openid-configuration`,
+                clientId: oidcClientId as string,
+                clientSecret: oidcClientSecret as string,
+                scopes: ["openid", "email", "profile"],
+                pkce: true,
+              },
+            ],
+          }),
+        ]
+      : []),
   ],
 });

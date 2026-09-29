@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Runs the local AXXES pair as a real launchd job rather than a backgrounded
+  shell. `launchctl submit` was not enough: the processes kept being reaped
+  between terminal invocations, so this uses KeepAlive plus absolute paths,
+  and nvm's node is named explicitly because launchd has no shell profile to
+  source it from.
+
+  Install:  cp scripts/com.axxes.vitrine.local.plist ~/Library/LaunchAgents/
+            launchctl load ~/Library/LaunchAgents/com.axxes.vitrine.local.plist
+  Remove:  launchctl unload ~/Library/LaunchAgents/com.axxes.vitrine.local.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.axxes.vitrine.local</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/admin/Developer/vitrine/scripts/dev-local.sh</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/axxes-local/vitrine.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/axxes-local/vitrine.err.log</string>
+</dict>
+</plist>
