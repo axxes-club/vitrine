@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Vitrine, supervised by launchd.
+
+  One plist per server, each running Next.js directly rather than through a
+  wrapper script. A script that spawns the real process and exits has its
+  children reaped with the process group; when launchd runs the server itself,
+  KeepAlive is a real supervision and the desk stays up.
+
+  nvm's node is on PATH explicitly because launchd has no shell profile.
+
+  Install:
+    cp scripts/com.axxes.vitrine.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.axxes.vitrine.plist
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.axxes.vitrine.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.axxes.vitrine</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>export PATH="/Users/admin/.nvm/versions/node/v20.20.2/bin:/usr/bin:/bin:/usr/sbin:/sbin"; cd /Users/admin/Developer/vitrine && exec npx next start -p 3000</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/admin/Developer/vitrine</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/admin/.nvm/versions/node/v20.20.2/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/axxes-local/vitrine.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/axxes-local/vitrine.err.log</string>
+</dict>
+</plist>
