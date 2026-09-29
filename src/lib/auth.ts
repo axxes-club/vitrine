@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { genericOAuth } from "better-auth/plugins";
 import { db } from "@/lib/db";
 import {
   user,
@@ -61,5 +62,23 @@ export const auth = betterAuth({
     schema: { user, session, account, verification },
   }),
   emailAndPassword: { enabled: true },
-  plugins: [nextCookies()],
+  plugins: [
+    nextCookies(),
+    // "Continue with AXXES" — Handshake is the suite's identity provider.
+    // Discovery + PKCE; claims come from its /userinfo. The shared-cookie path
+    // above still works first-party; this opens the door from any host and for
+    // accounts whose cookie did not come along.
+    genericOAuth({
+      config: [
+        {
+          providerId: "axxes",
+          discoveryUrl: `${process.env.HANDSHAKE_URL || "https://handshake.axxes.club"}/api/auth/.well-known/openid-configuration`,
+          clientId: process.env.AXXES_OIDC_CLIENT_ID || "vitrine",
+          clientSecret: process.env.AXXES_OIDC_CLIENT_SECRET,
+          scopes: ["openid", "email", "profile"],
+          pkce: true,
+        },
+      ],
+    }),
+  ],
 });

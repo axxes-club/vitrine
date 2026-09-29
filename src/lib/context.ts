@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { auth, COLLECTION_TENANT_SLUG, ENTRY_ORG_NAMES, HANDSHAKE_URL } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { tenants, tenantMemberships } from "@/lib/db/schema";
+import { hasValidInvite } from "@/lib/invite";
 
 export type VitrineRole = "admin" | "registrar" | "viewer";
 
@@ -21,6 +22,18 @@ export type VitrineRole = "admin" | "registrar" | "viewer";
  * company should not also have to be added to the collection's private
  * workspace to reach the desk, and before this was true that meant adding
  * every colleague by hand, one seat at a time.
+ *
+ * Two further ways in, both deliberate:
+ *
+ *   - A **superadmin** is not locked out of the suite's own front door. They
+ *     get the desk as an admin without needing a seat they would have to grant
+ *     themselves. Before this, a superadmin who was not a member of either
+ *     organization was redirected to sign-in, signed in successfully, and was
+ *     then told they had no access — the worst possible outcome, because it
+ *     looks like a broken account rather than a missing grant.
+ *   - A valid **invitation code** gets someone to the door. It grants access to
+ *     the desk, not an identity: they still sign in, and the work is written
+ *     against the account that did.
  */
 
 /** AXXES team rank -> what they may do at the desk. */
@@ -45,6 +58,11 @@ export async function getContext() {
     .where(eq(tenants.slug, COLLECTION_TENANT_SLUG))
     .limit(1);
   if (!tenant) return null;
+
+  const isSuperadmin = Boolean(
+    (session.user as { isSuperadmin?: boolean }).isSuperadmin,
+  );
+  const invited = await hasValidInvite();
 
   // The collection's own seat wins when there is one, so granting someone a
   // direct seat can always refine what their AXXES CLUB rank implies.
@@ -84,7 +102,11 @@ export async function getContext() {
   const teamRole = seat?.role ?? null;
   const viaOrg = seat ? ordered.find((o) => o.id === seat.tenantId)?.name ?? null : null;
 
-  return { user: session.user, tenant, teamRole, role: deskRoleFor(teamRole), viaOrg };
+  // A seat is the normal route. Failing that, a superadmin or a valid code gets
+  // in — an admin of the company, and someone holding an invitation.
+  const role = deskRoleFor(teamRole) ?? (isSuperadmin ? "admin" : invited ? "admin" : null);
+
+  return { user: session.user, tenant, teamRole, role, viaOrg, isSuperadmin, invited };
 }
 
 /** The collection sorts first, so a direct seat always outranks a derived one. */
