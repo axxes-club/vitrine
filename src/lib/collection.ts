@@ -61,23 +61,38 @@ export type WorksQuery = {
 
 const PER_PAGE_MAX = 200;
 
-/** images is jsonb; this picks the first usable url out of it. */
+/**
+ * images is jsonb; this picks the first usable url out of it.
+ *
+ * The columns are interpolated rather than written as `p.images` because drizzle
+ * does not alias tables in the SQL it emits — the FROM clause reads
+ * `from "vitrine_works" left join "products"`, so a hand-written `p.` prefix is
+ * an undefined relation. This is a runtime 42P01 and a clean typecheck, which is
+ * why it is worth a comment.
+ */
 const FIRST_IMAGE = sql<string | null>`
   CASE
-    WHEN p.images IS NULL OR jsonb_array_length(p.images) = 0 THEN NULL
+    WHEN ${products.images} IS NULL OR jsonb_array_length(${products.images}) = 0 THEN NULL
     ELSE (
       SELECT im->>'url'
-      FROM jsonb_array_elements(p.images) AS im
+      FROM jsonb_array_elements(${products.images}) AS im
       WHERE im->>'url' IS NOT NULL
       LIMIT 1
     )
   END
 `;
 
-/** "1998" / "c. 1998" / "1998-99" -> 1990, for the decade facet. */
+/**
+ * "1998" / "c. 1998" / "1998-99" -> 1990, for the decade facet.
+ *
+ * Kept as text rather than a range predicate so the decade facet and the decade
+ * filter cannot disagree: both are the same expression, so the count next to a
+ * decade button is the count that button will return.
+ */
 const DECADE = sql<number | null>`
   CASE
-    WHEN d.year ~ '^[0-9]{4}' THEN (substring(d.year from 1 for 4))::int / 10 * 10
+    WHEN ${artworkDetails.year} ~ '^[0-9]{4}'
+      THEN (substring(${artworkDetails.year} from 1 for 4))::int / 10 * 10
     ELSE NULL
   END
 `;
@@ -93,6 +108,7 @@ function buildConditions(q: WorksQuery): SQL[] {
         ilike(vitrineWorks.accession, term),
         ilike(vitrineWorks.title, term),
         ilike(artworkDetails.artistName, term),
+        ilike(artists.name, term),
         ilike(artworkDetails.medium, term),
         ilike(artworkDetails.title, term),
         ilike(artworkDetails.series, term),
@@ -100,7 +116,17 @@ function buildConditions(q: WorksQuery): SQL[] {
       )!
     );
   }
-  if (q.artistSlug) c.push(eq(artworkDetails.artistSlug, q.artistSlug));
+  if (q.artistSlug) {
+    // Resolve through artists.slug, NOT artwork_details.artist_slug. The two
+    // tables use different name orders (artists is surname-first, artwork_details
+    // is not), so a facet built on one and a filter built on the other agree on
+    // nothing: the sidebar would show "Ángel Capllonch (130)" and clicking it
+    // would return zero works. Both sides go through artists.slug now.
+    c.push(sql`${vitrineWorks.artistId} = (
+      SELECT a.id FROM artists a
+      WHERE a.slug = ${q.artistSlug} AND a.tenant_id = ${vitrineWorks.tenantId}
+    )`);
+  }
   if (q.status) c.push(eq(vitrineWorks.status, q.status));
   if (typeof q.decade === "number") c.push(sql`${DECADE} = ${q.decade}`);
   if (q.locationKind) c.push(eq(vitrineWorks.locationKind, q.locationKind));
@@ -145,8 +171,10 @@ export async function listWorks(q: WorksQuery): Promise<{
         accession: vitrineWorks.accession,
         productId: vitrineWorks.productId,
         artistId: vitrineWorks.artistId,
-        artistName: artworkDetails.artistName,
-        artistSlug: artworkDetails.artistSlug,
+        artistName: artists.name,
+        // From the artists table, not artwork_details, so the link in the row
+        // resolves against the same slug the facet filter expects.
+        artistSlug: artists.slug,
         title: vitrineWorks.title,
         medium: artworkDetails.medium,
         dimensions: artworkDetails.dimensions,
@@ -160,6 +188,7 @@ export async function listWorks(q: WorksQuery): Promise<{
       .from(vitrineWorks)
       .leftJoin(products, eq(products.id, vitrineWorks.productId))
       .leftJoin(artworkDetails, eq(artworkDetails.productId, vitrineWorks.productId))
+      .leftJoin(artists, eq(artists.id, vitrineWorks.artistId))
       .where(where)
       .orderBy(dir(orderCol), asc(vitrineWorks.accession))
       .limit(perPage)
@@ -169,6 +198,7 @@ export async function listWorks(q: WorksQuery): Promise<{
       .from(vitrineWorks)
       .leftJoin(products, eq(products.id, vitrineWorks.productId))
       .leftJoin(artworkDetails, eq(artworkDetails.productId, vitrineWorks.productId))
+      .leftJoin(artists, eq(artists.id, vitrineWorks.artistId))
       .where(where),
   ]);
 
