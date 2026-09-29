@@ -26,6 +26,11 @@ export const HANDSHAKE_URL = process.env.HANDSHAKE_URL?.replace(/\/$/, "") || nu
 
 // Vitrine is an administrators' application: only people with a membership in
 // a collection organization may enter the desk.
+//
+// Which collection is chosen per request (see lib/context.ts), not fixed here.
+// This is only the fallback when a signed-in person belongs to exactly one
+// collection, and when VITRINE_TENANT_SLUG pins the deployment to a single
+// collection — the Reyes-Veray desk, which is still how it is deployed.
 export const COLLECTION_TENANT_SLUG =
   process.env.VITRINE_TENANT_SLUG || "coleccion-reyes-veray";
 

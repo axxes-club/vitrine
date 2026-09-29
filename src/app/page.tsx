@@ -1,5 +1,6 @@
 import Image from "next/image";
 import WaitlistForm from "@/app/WaitlistForm";
+import { vitrinePlans, type Plan } from "@/lib/billing";
 
 /**
  * The collection, used as the argument.
@@ -118,7 +119,63 @@ const TRUST = [
   "Publish to the web only when you choose",
 ];
 
-export default function Home() {
+/**
+ * The plans are read from the shared `plans` table rather than written here, so
+ * the price a collector reads on this page is the price the gate charges. Two
+ * copies of a price is one more thing to forget to update.
+ *
+ * `scale` also lists Vitrine, but it is a suite price for a company reselling
+ * AXXES to its own customers, not a price a collector pays for one collection,
+ * so it is filtered out of display and the fallback keeps the page from ever
+ * rendering empty if the table is unreachable.
+ */
+async function collectorPlans(): Promise<Plan[]> {
+  try {
+    const all = await vitrinePlans();
+    const perCollection = all.filter((p) => p.maxApps === 1);
+    return perCollection.length ? perCollection : all;
+  } catch {
+    return FALLBACK_PLANS;
+  }
+}
+
+const FALLBACK_PLANS: Plan[] = [
+  {
+    key: "collector",
+    name: "Collector",
+    blurb: "One collection, properly kept.",
+    priceCents: 9900,
+    annualPriceCents: 99000,
+    maxApps: 1,
+    products: ["vitrine"],
+    features: [
+      "Unlimited works in one collection",
+      "Provenance, condition and exhibition history per work",
+      "Artist index with biographies",
+      "Exports to CSV and JSON",
+      "Invited registrars and viewers",
+    ],
+  },
+  {
+    key: "collector-pro",
+    name: "Collector Pro",
+    blurb: "The desk, plus an assistant that reads what you already have.",
+    priceCents: 19900,
+    annualPriceCents: 199000,
+    maxApps: 1,
+    products: ["vitrine"],
+    features: [
+      "Everything in Collector",
+      "Assisted cataloguing — propose a record from a catalogue, wall label or condition report",
+      "Review before anything is written; nothing saves without a human",
+      "Duplicate and near-duplicate detection across your own records",
+      "Priority support",
+    ],
+  },
+];
+
+export default async function Home() {
+  const plans = await collectorPlans();
   return (
     <main>
       {/* Masthead */}
@@ -139,7 +196,7 @@ export default function Home() {
           className="hero"
         >
           <div className="measure">
-            <p className="overline" style={{ marginBottom: "2.2rem" }}>By invitation</p>
+            <p className="overline" style={{ marginBottom: "2.2rem" }}>By invitation · Two plans</p>
             <h1 className="serif" style={{ fontWeight: 300, fontSize: "clamp(2.6rem, 6.4vw, 4.6rem)", lineHeight: 1.1, letterSpacing: "-0.012em" }}>
               Every collection
               <br />
@@ -312,12 +369,81 @@ export default function Home() {
         </ul>
       </section>
 
+      {/* Membership */}
+      <section id="membership" className="band-quiet" style={{ borderTop: "1px solid var(--line)" }}>
+        <div className="frame">
+          <p className="overline">Membership</p>
+          <h2
+            className="serif"
+            style={{ fontWeight: 300, fontSize: "clamp(1.8rem, 4vw, 2.6rem)", marginTop: "1rem" }}
+          >
+            Two plans. Per collection.
+          </h2>
+          <p className="lede measure" style={{ marginTop: "1.2rem" }}>
+            One collection each. Your records are yours and leave with you at any time, in CSV or
+            JSON — that is not a tier difference.
+          </p>
+
+          <div
+            style={{
+              marginTop: "3rem",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(17rem, 1fr))",
+              gap: "1px",
+              background: "var(--line)",
+              border: "1px solid var(--line)",
+            }}
+          >
+            {plans.map((p) => (
+              <div key={p.key} style={{ background: "var(--background)", padding: "2rem" }}>
+                <p className="overline">{p.name}</p>
+                <p className="serif" style={{ marginTop: "0.6rem", fontSize: "2.6rem", fontWeight: 300 }}>
+                  ${(p.priceCents / 100).toFixed(0)}
+                  <span style={{ fontSize: "1rem", color: "var(--muted)" }}>/month</span>
+                </p>
+                {p.blurb && (
+                  <p className="serif" style={{ marginTop: "0.5rem", color: "var(--muted)" }}>
+                    {p.blurb}
+                  </p>
+                )}
+                <ul
+                  style={{
+                    margin: "1.5rem 0 0",
+                    padding: 0,
+                    listStyle: "none",
+                    display: "grid",
+                    gap: "0.6rem",
+                  }}
+                >
+                  {p.features.map((f) => (
+                    <li key={f} className="serif" style={{ display: "flex", gap: "0.6rem", lineHeight: 1.5 }}>
+                      <span aria-hidden style={{ color: "var(--muted)" }}>·</span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p style={{ marginTop: "1.8rem" }}>
+                  <a href="#waitlist" className="cta" style={{ fontSize: "0.8rem" }}>
+                    Request {p.name}
+                  </a>
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <p style={{ marginTop: "1.8rem", fontSize: "0.78rem", color: "var(--muted)" }}>
+            Membership is extended by invitation, one collection at a time. Leave your address and we
+            will write when a place is ready — or join now with an invitation code.
+          </p>
+        </div>
+      </section>
+
       {/* Waitlist / invite */}
       <section id="waitlist" className="frame band" style={{ textAlign: "center" }}>
         <h2 className="statement" style={{ fontWeight: 300 }}>The register opens quietly.</h2>
         <p className="lede measure" style={{ margin: "1.3rem auto 0" }}>
-          Membership is extended by invitation, one collection at a time. Leave your address and we
-          will write when a place is ready — or join now with an invitation code.
+          Tell us about the collection and we will write when a place is ready — or join now with an
+          invitation code.
         </p>
         <div style={{ marginTop: "2.6rem" }}>
           <WaitlistForm />

@@ -1,7 +1,10 @@
 import { desc, eq, sql } from "drizzle-orm";
-import { requireContext, canEdit } from "@/lib/context";
-import { AwaitingAccess } from "@/components/awaiting-access";
 import { db } from "@/lib/db";
+import { AwaitingAccess } from "@/components/awaiting-access";
+import { NeedsSubscription } from "@/components/needs-subscription";
+import { CollectionSwitcher } from "@/components/collection-switcher";
+import { vitrinePlans } from "@/lib/billing";
+import { requireContext, canEdit, getAccess } from "@/lib/context";
 import { products, artworkDetails } from "@/lib/db/schema";
 
 export const metadata = { title: "The Desk — Vitrine" };
@@ -12,11 +15,25 @@ export default async function AdminPage() {
 
   // A valid AXXES account with no seat at this collection: show them the door
   // and who opens it, rather than a desk where every control is inert.
-  if (!ctx.role) {
+  if (!ctx.role || !ctx.tenant) {
     return (
       <AwaitingAccess
         name={ctx.user?.name}
         email={ctx.user?.email}
+      />
+    );
+  }
+
+  // Seated, but the collection is not on a plan that includes Vitrine. Show the
+  // plans rather than a desk, because a desk nobody can save into is worse than
+  // an honest "this needs a plan".
+  const access = await getAccess(ctx);
+  if (!access.allowed && access.reason === "no-subscription") {
+    return (
+      <NeedsSubscription
+        collectionName={ctx.tenant.name}
+        currentPlan={ctx.subscription?.plan?.name ?? null}
+        plans={await vitrinePlans()}
       />
     );
   }
@@ -63,7 +80,20 @@ export default async function AdminPage() {
         <span className="wordmark" style={{ fontSize: "0.85rem" }}>
           Vitrine
         </span>
-        <nav className="overline" style={{ display: "flex", gap: "1.8rem" }}>
+        <nav
+          className="overline"
+          style={{ display: "flex", alignItems: "center", gap: "1.8rem" }}
+        >
+          {access.planName && <span style={{ opacity: 0.6 }}>{access.planName}</span>}
+          <CollectionSwitcher
+            collections={ctx.collections.map((c) => ({
+              id: c.id,
+              name: c.name,
+              slug: c.slug,
+              role: c.role,
+            }))}
+            activeSlug={ctx.tenant.slug}
+          />
           <a href="https://handshake.axxes.club" style={{ color: "inherit", textDecoration: "none" }}>
             AXXES apps
           </a>
@@ -135,7 +165,7 @@ export default async function AdminPage() {
             return (
               <a
                 key={w.id}
-                href={`https://coleccionreyesveray.com/art/${w.slug ?? w.id}`}
+                href={`/art/${w.slug ?? w.id}`}
                 style={{ textDecoration: "none", color: "inherit", display: "block" }}
               >
                 <div

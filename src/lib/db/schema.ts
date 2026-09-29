@@ -1,6 +1,7 @@
 import {
   boolean,
   index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -148,3 +149,41 @@ export const waitlist = pgTable("waitlist", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Billing, mapped from the shared AXXES schema (owned by the members portal).
+ *
+ * Vitrine reads these and never migrates them: one subscription table across
+ * the suite, so a collector's plan is the same fact everywhere it is asked
+ * about. The collector plans that carry vitrine are `collector` ($99/mo) and
+ * `collector-pro` ($199/mo); `scale` also lists it and is left alone so an
+ * existing subscriber does not lose a product they already pay for.
+ */
+export const plans = pgTable("plans", {
+  key: text("key").primaryKey(),
+  name: text("name").notNull(),
+  blurb: text("blurb"),
+  priceCents: integer("price_cents").notNull(),
+  annualPriceCents: integer("annual_price_cents"),
+  maxApps: integer("max_apps"),
+  products: jsonb("products").$type<string[]>().notNull().default([]),
+  features: jsonb("features").$type<string[]>().notNull().default([]),
+  position: integer("position").notNull(),
+});
+
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    // The organization. This is the unit a collector buys for.
+    tenantId: uuid("tenant_id").notNull(),
+    planKey: text("plan_key"),
+    status: text("status").notNull().default("incomplete"),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    pendingPlanKey: text("pending_plan_key"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  t => [index("vitrine_subscriptions_tenant_idx").on(t.tenantId)]
+);
+
