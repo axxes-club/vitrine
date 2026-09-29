@@ -71,6 +71,19 @@ export const ENTRY_ORG_NAMES: string[] = (
 export const auth = betterAuth({
   baseURL,
   secret: process.env.BETTER_AUTH_SECRET,
+  // Surface the shared AXXES admin flag on the session user.
+  //
+  // The column exists on the shared `user` table and is mapped in the schema,
+  // but Better Auth only returns columns it knows about, so without this
+  // `session.user.isSuperadmin` was always undefined and every superadmin
+  // exemption in the gate silently evaluated false. Reading the flag is what
+  // keeps the people who run AXXES from being locked out of their own product.
+  user: {
+    additionalFields: {
+      isSuperadmin: { type: "boolean", required: false, input: false },
+      role: { type: "string", required: false, input: false },
+    },
+  },
   trustedOrigins: [
     baseURL,
     `https://${parentDomain}`,

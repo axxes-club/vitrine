@@ -23,6 +23,11 @@ export const user = pgTable("user", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   isSuperadmin: boolean("is_superadmin").notNull().default(false),
+  // Shared with members.axxes.club: `SUPERADMIN` mirrors is_superadmin, kept in
+  // step by demb-inventory. Mapped here because Better Auth validates every
+  // field it is asked to expose against this schema and refuses to start if a
+  // declared field has no column.
+  role: text("role"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
