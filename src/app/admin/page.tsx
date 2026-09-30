@@ -6,6 +6,7 @@ import { CollectionSwitcher } from "@/components/collection-switcher";
 import { PageHeader } from "@/components/layout/page-header";
 import { vitrinePlans } from "@/lib/billing";
 import { requireContext, canEdit, getAccess } from "@/lib/context";
+import { getCustomerBrand } from "@/lib/white-label";
 import { vitrineWorks, vitrineEvents, vitrineValuations } from "@/lib/db/schema";
 import { collectionSummary, listWorks, facetCounts, type WorkRow } from "@/lib/collection";
 import { WorksTable } from "@/components/works-table";
@@ -88,9 +89,21 @@ export default async function AdminPage({
     { label: "Valuations", value: (values[0]?.n ?? 0).toLocaleString() },
   ];
 
+  // A white-label customer's desk carries their mark and color.
+  const brand = await getCustomerBrand(ctx.tenant.id);
+
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen" style={brand?.accent ? ({ "--primary": hslParts(brand.accent) } as React.CSSProperties) : undefined}>
       <div className="frame py-8">
+        {brand && (
+          <div className="mb-6 flex items-center gap-3">
+            {(brand.iconUrl || brand.logoUrl) && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={(brand.iconUrl || brand.logoUrl)!} alt="" className="h-9 max-w-[160px] object-contain" />
+            )}
+            <span className="text-xs text-muted-foreground">{brand.name} · Powered by AXXES</span>
+          </div>
+        )}
         <PageHeader
           heading={ctx.tenant.name}
           description="The collection, as it stands."
@@ -135,4 +148,23 @@ export default async function AdminPage({
       </div>
     </main>
   );
+}
+
+/** Vitrine's theme keeps colors as bare HSL parts ("40 20% 43%"); a customer's hex is converted. */
+function hslParts(hex: string): string {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let hue = 0;
+  if (d !== 0) {
+    if (max === r) hue = ((g - b) / d) % 6;
+    else if (max === g) hue = (b - r) / d + 2;
+    else hue = (r - g) / d + 4;
+  }
+  hue = Math.round(hue * 60 + 360) % 360;
+  return `${hue} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
