@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowUpRight } from "lucide-react";
+import styles from "./waitlist.module.css";
 
 type State =
   | { kind: "idle" }
@@ -35,83 +37,38 @@ export default function WaitlistForm() {
       }
       setState({ kind: "done" });
     } catch {
-      setState({ kind: "error", message: "The network is being shy. Please try again." });
+      setState({ kind: "error", message: "We couldn’t connect. Please try again." });
     }
   }
 
   if (state.kind === "done") {
     return (
-      <p
-        className="serif"
-        style={{ fontSize: "1.2rem", lineHeight: 1.6, fontStyle: "italic" }}
-        role="status"
-      >
-        Noted. Your name is on the register — we will write when a place is
-        ready.
+      <p className={styles.success} role="status">
+        You’re on the list. We’ll be in touch when a place is ready for your collection.
       </p>
     );
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      style={{
-        display: "flex",
-        gap: 0,
-        maxWidth: 460,
-        margin: "0 auto",
-        borderBottom: "1px solid var(--foreground)",
-      }}
-    >
+    <form onSubmit={onSubmit} className={styles.form} aria-label="Request an invitation" aria-busy={state.kind === "busy"}>
       <input
+        className={styles.input}
         type="email"
+        name="email"
+        autoComplete="email"
         required
         value={email}
         onChange={e => setEmail(e.target.value)}
-        placeholder="your@click.com"
+        placeholder="Your email address"
         aria-label="Email address"
-        style={{
-          flex: 1,
-          minWidth: 0,
-          border: "none",
-          outline: "none",
-          background: "transparent",
-          padding: "0.9rem 0.2rem",
-          fontFamily: "var(--font-serif)",
-          fontSize: "1.08rem",
-          color: "var(--foreground)",
-        }}
+        aria-invalid={state.kind === "error"}
+        aria-describedby={state.kind === "error" ? "waitlist-error" : undefined}
       />
-      <button
-        type="submit"
-        disabled={state.kind === "busy"}
-        style={{
-          border: "none",
-          background: "none",
-          cursor: state.kind === "busy" ? "wait" : "pointer",
-          padding: "0.9rem 0.4rem",
-          fontFamily: "var(--font-display)",
-          fontSize: "0.64rem",
-          letterSpacing: "0.28em",
-          textTransform: "uppercase",
-          color: "var(--foreground)",
-        }}
-      >
-        {state.kind === "busy" ? "Sending" : "Join"}
+      <button className={styles.button} type="submit" disabled={state.kind === "busy"}>
+        {state.kind === "busy" ? "Sending…" : "Request access"}
+        <ArrowUpRight size={15} aria-hidden="true" />
       </button>
-      {state.kind === "error" && (
-        <p
-          role="alert"
-          style={{
-            width: "100%",
-            padding: "0.7rem 0.2rem 0",
-            fontSize: "0.92rem",
-            color: "#8a2f2f",
-          }}
-        >
-          {state.message}
-        </p>
-      )}
+      {state.kind === "error" && <p id="waitlist-error" role="alert" className={styles.error}>{state.message}</p>}
     </form>
   );
 }

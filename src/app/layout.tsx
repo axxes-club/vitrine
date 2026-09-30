@@ -16,12 +16,12 @@ const display = Syncopate({
 });
 
 export const metadata: Metadata = {
-  title: "Vitrine — Every collection deserves a vitrine.",
+  title: "Vitrine — Exceptional art. An extraordinary collection.",
   description:
-    "The administrator's desk for serious art collections. Provenance, condition, legacy — kept in one quiet room, published to the web only when you choose. Invite-only.",
+    "Premium art collection software for collectors. Catalog your works, preserve provenance, track condition, and build a lasting legacy. Available by invitation.",
   openGraph: {
     title: "Vitrine",
-    description: "Every collection deserves a vitrine.",
+    description: "Exceptional art. An extraordinary collection. Art collection software for those who see more.",
     type: "website",
   },
 };
