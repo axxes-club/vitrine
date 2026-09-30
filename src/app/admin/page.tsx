@@ -2,6 +2,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { AwaitingAccess } from "@/components/awaiting-access";
 import { NeedsSubscription } from "@/components/needs-subscription";
+import { AllAppsSwitcher } from "@/components/all-apps-switcher";
 import { CollectionSwitcher } from "@/components/collection-switcher";
 import { PageHeader } from "@/components/layout/page-header";
 import { vitrinePlans } from "@/lib/billing";
@@ -108,12 +109,13 @@ export default async function AdminPage({
           heading={ctx.tenant.name}
           description="The collection, as it stands."
           actions={
-            ctx.collections.length > 1 ? (
-              <CollectionSwitcher
+            <div className="flex items-center gap-2">
+              <AllAppsSwitcher />
+              {ctx.collections.length > 1 && <CollectionSwitcher
                 collections={ctx.collections}
                 activeSlug={ctx.tenant.slug}
-              />
-            ) : undefined
+              />}
+            </div>
           }
         />
 
