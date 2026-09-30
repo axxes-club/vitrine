@@ -1,12 +1,30 @@
-import { headers } from "next/headers";
+import "server-only";
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { auth, COLLECTION_TENANT_SLUG, ENTRY_ORG_NAMES, HANDSHAKE_URL } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { tenants, tenantMemberships } from "@/lib/db/schema";
+import { tenants, tenantMemberships, plans, subscriptions } from "@/lib/db/schema";
 import { hasValidInvite } from "@/lib/invite";
+import { getSubscription } from "@/lib/billing";
 
 export type VitrineRole = "admin" | "registrar" | "viewer";
+
+/** Cookie holding the collection this person is currently looking at. */
+export const ACTIVE_COLLECTION_COOKIE = "vitrine_collection";
+
+/**
+ * A collection this person may open the desk on, and how they got in.
+ */
+export type Collection = {
+  id: string;
+  name: string;
+  slug: string;
+  role: VitrineRole;
+  /** The org the seat actually came from, when it was not a direct seat. */
+  viaOrg: string | null;
+};
+
 
 /**
  * The session, the collection the desk is looking at, and the acting user's
@@ -47,71 +65,190 @@ function deskRoleFor(teamRole: string | null | undefined): VitrineRole | null {
         : null;
 }
 
+/**
+ * Every collection this person may open a desk on.
+ *
+ * Three sources, all of which have to be asked because a collector can arrive
+ * by any of them:
+ *
+ *   - a direct seat in the collection (the normal case)
+ *   - membership of an entry organization such as AXXES CLUB, which is the
+ *     company and can reach any collection
+ *   - a superadmin, who is never locked out of the suite's own front door
+ *
+ * A valid invitation is handled separately: it gets someone through the door
+ * but names no collection, so it is applied after we know which one is being
+ * opened rather than pretending to be a seat.
+ *
+ * Collections with no artwork are still listed. A collector who has just paid
+ * must be able to open an empty desk to add their first work; hiding it until
+ * it has records would be a desk that cannot be filled.
+ */
+export async function getCollections(userId: string): Promise<Collection[]> {
+  const orgs = await db
+    .select({ id: tenants.id, name: tenants.name, slug: tenants.slug })
+    .from(tenants)
+    .where(
+      and(
+        isNull(tenants.deletedAt),
+        or(
+          inArray(tenants.name, ENTRY_ORG_NAMES),
+          // A pinned deployment serves exactly one collection.
+          ...(COLLECTION_TENANT_SLUG ? [eq(tenants.slug, COLLECTION_TENANT_SLUG)] : [])
+        )
+      )
+    );
+
+  if (!orgs.length) return [];
+
+  const seats = await db
+    .select({ role: tenantMemberships.role, tenantId: tenantMemberships.tenantId })
+    .from(tenantMemberships)
+    .where(
+      and(
+        inArray(
+          tenantMemberships.tenantId,
+          orgs.map((o) => o.id)
+        ),
+        eq(tenantMemberships.userId, userId),
+        isNull(tenantMemberships.deletedAt)
+      )
+    );
+
+  return orgs.flatMap((org) => {
+    const seat = seats.find((s) => s.tenantId === org.id);
+    const role = deskRoleFor(seat?.role);
+    if (!role) return [];
+    const isDirect = org.slug === COLLECTION_TENANT_SLUG;
+    return [
+      {
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        role,
+        viaOrg: isDirect ? null : org.name,
+      },
+    ];
+  });
+}
+
 export async function getContext() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return null;
-
-  // The collection is the data boundary and never varies.
-  const [tenant] = await db
-    .select()
-    .from(tenants)
-    .where(eq(tenants.slug, COLLECTION_TENANT_SLUG))
-    .limit(1);
-  if (!tenant) return null;
 
   const isSuperadmin = Boolean(
     (session.user as { isSuperadmin?: boolean }).isSuperadmin,
   );
   const invited = await hasValidInvite();
 
-  // The collection's own seat wins when there is one, so granting someone a
-  // direct seat can always refine what their AXXES CLUB rank implies.
-  const orgs = await db
-    .select({ id: tenants.id, name: tenants.name })
-    .from(tenants)
-    .where(
-      and(
-        isNull(tenants.deletedAt),
-        or(
-          eq(tenants.slug, COLLECTION_TENANT_SLUG),
-          inArray(tenants.name, ENTRY_ORG_NAMES)
+  const collections = await getCollections(session.user.id);
+
+  // A superadmin or an invited guest with no seat anywhere still gets a desk:
+  // the invitation path falls back to the pinned collection, and a superadmin
+  // to the first one, so the door is never a dead end for the people who run
+  // the company.
+  let effective = collections;
+  if (!effective.length && (isSuperadmin || invited)) {
+    const fallback = await db
+      .select({ id: tenants.id, name: tenants.name, slug: tenants.slug })
+      .from(tenants)
+      .where(
+        and(
+          isNull(tenants.deletedAt),
+          ...(COLLECTION_TENANT_SLUG
+            ? [eq(tenants.slug, COLLECTION_TENANT_SLUG)]
+            : [inArray(tenants.name, ENTRY_ORG_NAMES)])
         )
       )
-    );
-  const ordered = orgs.sort(
-    (a, b) => rank(a.id, tenant.id) - rank(b.id, tenant.id)
-  );
+      .limit(1);
+    if (fallback.length) {
+      effective = [
+        {
+          id: fallback[0].id,
+          name: fallback[0].name,
+          slug: fallback[0].slug,
+          role: "admin",
+          viaOrg: invited && !isSuperadmin ? "Invitation" : "AXXES",
+        },
+      ];
+    }
+  }
 
-  const seats = ordered.length
-    ? await db
-        .select({ role: tenantMemberships.role, tenantId: tenantMemberships.tenantId })
-        .from(tenantMemberships)
-        .where(
-          and(
-            inArray(tenantMemberships.tenantId, ordered.map((o) => o.id)),
-            eq(tenantMemberships.userId, session.user.id),
-            isNull(tenantMemberships.deletedAt)
-          )
-        )
-    : [];
+  if (!effective.length) {
+    return {
+      user: session.user,
+      collections: [] as Collection[],
+      tenant: null,
+      role: null,
+      viaOrg: null,
+      isSuperadmin,
+      invited,
+      subscription: null,
+    };
+  }
 
-  const seat =
-    seats.find((s) => s.tenantId === tenant.id) ??
-    ordered.map((o) => seats.find((s) => s.tenantId === o.id)).find(Boolean);
+  // Which collection: the one in the cookie if it is still one they can open,
+  // otherwise their first. Cookies are user-editable, so it is re-validated
+  // against the list rather than trusted.
+  const wanted = (await cookies()).get(ACTIVE_COLLECTION_COOKIE)?.value;
+  const tenant =
+    effective.find((c) => c.slug === wanted || c.id === wanted) ?? effective[0];
 
-  const teamRole = seat?.role ?? null;
-  const viaOrg = seat ? ordered.find((o) => o.id === seat.tenantId)?.name ?? null : null;
+  const subscription = await getSubscription(tenant.id);
 
-  // A seat is the normal route. Failing that, a superadmin or a valid code gets
-  // in — an admin of the company, and someone holding an invitation.
-  const role = deskRoleFor(teamRole) ?? (isSuperadmin ? "admin" : invited ? "admin" : null);
-
-  return { user: session.user, tenant, teamRole, role, viaOrg, isSuperadmin, invited };
+  return {
+    user: session.user,
+    collections: effective,
+    tenant,
+    teamRole: null,
+    role: tenant.role,
+    viaOrg: tenant.viaOrg,
+    isSuperadmin,
+    invited,
+    subscription,
+  };
 }
 
-/** The collection sorts first, so a direct seat always outranks a derived one. */
-function rank(tenantId: string, collectionId: string): number {
-  return tenantId === collectionId ? 0 : 1;
+/**
+ * Whether this organization may actually use the desk.
+ *
+ * A seat says you may enter; a subscription says the collection is paid for.
+ * Both are required, because either alone is wrong: a free seat on an unpaid
+ * organization is not a customer, and a paid organization with no registrar is
+ * nobody's problem yet.
+ *
+ * The two exemptions are deliberate and both are about not locking the company
+ * out of its own front door: a superadmin is never billed, and the AXXES CLUB
+ * desk is how the team demonstrates the product to a collector considering it.
+ */
+export async function getAccess(
+  ctx: NonNullable<Awaited<ReturnType<typeof getContext>>>
+): Promise<{ allowed: boolean; reason: "ok" | "no-seat" | "no-subscription"; planName: string | null }> {
+  if (!ctx.role || !ctx.tenant) return { allowed: false, reason: "no-seat", planName: null };
+
+  if (ctx.isSuperadmin) {
+    return { allowed: true, reason: "ok", planName: "AXXES internal" };
+  }
+
+  // AXXES CLUB reaches any collection without each one being individually
+  // subscribed; it is the company demonstrating its own product.
+  if (ctx.viaOrg && ENTRY_ORG_NAMES.includes(ctx.viaOrg)) {
+    return { allowed: true, reason: "ok", planName: "AXXES CLUB" };
+  }
+
+  const sub = ctx.subscription;
+  if (!sub) return { allowed: false, reason: "no-subscription", planName: null };
+
+  const active = ["active", "trialing", "past_due"].includes(sub.status);
+  const notExpired =
+    !sub.currentPeriodEnd || sub.currentPeriodEnd.getTime() >= Date.now();
+  const carriesVitrine = !sub.plan || sub.plan.products.includes("vitrine");
+
+  if (!active || !notExpired || !carriesVitrine) {
+    return { allowed: false, reason: "no-subscription", planName: sub.plan?.name ?? null };
+  }
+
+  return { allowed: true, reason: "ok", planName: sub.plan?.name ?? null };
 }
 
 export async function requireContext() {

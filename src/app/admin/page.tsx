@@ -1,199 +1,138 @@
 import { desc, eq, sql } from "drizzle-orm";
-import { requireContext, canEdit } from "@/lib/context";
-import { AwaitingAccess } from "@/components/awaiting-access";
 import { db } from "@/lib/db";
-import { products, artworkDetails } from "@/lib/db/schema";
+import { AwaitingAccess } from "@/components/awaiting-access";
+import { NeedsSubscription } from "@/components/needs-subscription";
+import { CollectionSwitcher } from "@/components/collection-switcher";
+import { PageHeader } from "@/components/layout/page-header";
+import { vitrinePlans } from "@/lib/billing";
+import { requireContext, canEdit, getAccess } from "@/lib/context";
+import { vitrineWorks, vitrineEvents, vitrineValuations } from "@/lib/db/schema";
+import { collectionSummary, listWorks, facetCounts, type WorkRow } from "@/lib/collection";
+import { WorksTable } from "@/components/works-table";
+import type { Facet } from "@/lib/collection";
 
 export const metadata = { title: "The Desk — Vitrine" };
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage() {
+/** The desk's landing view: the collection at a glance, then the index. */
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const ctx = await requireContext();
 
   // A valid AXXES account with no seat at this collection: show them the door
   // and who opens it, rather than a desk where every control is inert.
-  if (!ctx.role) {
+  if (!ctx.role || !ctx.tenant) {
+    return <AwaitingAccess name={ctx.user?.name} email={ctx.user?.email} />;
+  }
+
+  // Seated, but the collection is not on a plan that includes Vitrine. Show the
+  // plans rather than a desk, because a desk nobody can save into is worse than
+  // an honest "this needs a plan".
+  const access = await getAccess(ctx);
+  if (!access.allowed && access.reason === "no-subscription") {
     return (
-      <AwaitingAccess
-        name={ctx.user?.name}
-        email={ctx.user?.email}
+      <NeedsSubscription
+        collectionName={ctx.tenant.name}
+        currentPlan={ctx.subscription?.plan?.name ?? null}
+        plans={await vitrinePlans()}
       />
     );
   }
 
-  const [counts] = await db
-    .select({
-      works: sqlCount(),
-    })
-    .from(products)
-    .where(eq(products.tenantId, ctx.tenant.id));
+  const params = await searchParams;
+  const one = (k: string) => {
+    const v = params[k];
+    return Array.isArray(v) ? v[0] : v;
+  };
 
-  const recent = await db
-    .select({
-      id: products.id,
-      name: products.name,
-      slug: products.slug,
-      images: products.images,
-      status: products.status,
-      updatedAt: products.updatedAt,
-      artist: artworkDetails.artistName,
-      title: artworkDetails.title,
-      year: artworkDetails.year,
-      medium: artworkDetails.medium,
-      inventoryNumber: artworkDetails.inventoryNumber,
-    })
-    .from(products)
-    .leftJoin(artworkDetails, eq(artworkDetails.productId, products.id))
-    .where(eq(products.tenantId, ctx.tenant.id))
-    .orderBy(desc(products.updatedAt))
-    .limit(12);
+  const query = {
+    tenantId: ctx.tenant.id,
+    search: one("q") ?? undefined,
+    artistSlug: one("artist") ?? undefined,
+    status: one("status") ?? undefined,
+    decade: one("decade") ? Number(one("decade")) : undefined,
+    sort: (one("sort") as "accession") ?? undefined,
+    dir: (one("dir") as "asc") ?? undefined,
+    page: one("page") ? Number(one("page")) : 1,
+    perPage: 50,
+  };
+
+  // Rows and facets in parallel: they are independent reads of the same tables,
+  // and a desk that waits for both before painting is a desk that feels slow.
+  const [summary, { rows, total, page, perPage }, facets] = await Promise.all([
+    collectionSummary(ctx.tenant.id),
+    listWorks(query),
+    facetCounts(query),
+  ]);
+
+  const [events, values] = await Promise.all([
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(vitrineEvents)
+      .where(eq(vitrineEvents.tenantId, ctx.tenant.id)),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(vitrineValuations)
+      .where(eq(vitrineValuations.tenantId, ctx.tenant.id)),
+  ]);
+
+  const stats = [
+    { label: "Works", value: summary.works.toLocaleString() },
+    { label: "On site", value: summary.onSite.toLocaleString() },
+    { label: "Artists", value: summary.artists.toLocaleString() },
+    { label: "On loan", value: summary.onLoan.toLocaleString() },
+    { label: "Recorded events", value: (events[0]?.n ?? 0).toLocaleString() },
+    { label: "Valuations", value: (values[0]?.n ?? 0).toLocaleString() },
+  ];
 
   return (
-    <main style={{ minHeight: "100vh", padding: "2.2rem 6vw 4rem" }}>
-      {/* Masthead */}
-      <header
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          gap: "0.8rem 2rem",
-        }}
-      >
-        <span className="wordmark" style={{ fontSize: "0.85rem" }}>
-          Vitrine
-        </span>
-        <nav className="overline" style={{ display: "flex", gap: "1.8rem" }}>
-          <a href="https://handshake.axxes.club" style={{ color: "inherit", textDecoration: "none" }}>
-            AXXES apps
-          </a>
-          <a href="/api/auth/sign-out" style={{ color: "inherit", textDecoration: "none" }}>
-            Sign out
-          </a>
-        </nav>
-      </header>
+    <main className="min-h-screen">
+      <div className="frame py-8">
+        <PageHeader
+          heading={ctx.tenant.name}
+          description="The collection, as it stands."
+          actions={
+            ctx.collections.length > 1 ? (
+              <CollectionSwitcher
+                collections={ctx.collections}
+                activeSlug={ctx.tenant.slug}
+              />
+            ) : undefined
+          }
+        />
 
-      {/* Heading */}
-      <section style={{ marginTop: "8vh", maxWidth: 1100, marginInline: "auto" }}>
-        <p className="overline">{ctx.tenant.name}</p>
-        <h1 className="serif" style={{ fontWeight: 300, fontSize: "clamp(2rem, 4.5vw, 3.2rem)" }}>
-          The administrator's desk
-        </h1>
-        <p className="serif" style={{ marginTop: "0.8rem", color: "var(--muted)", fontSize: "1.1rem" }}>
-          Signed in as {ctx.user.email} · {ctx.role}
-          {canEdit(ctx.role) ? "" : " (read-only)"}
-          {ctx.viaOrg && ctx.viaOrg !== ctx.tenant.name ? ` · via ${ctx.viaOrg}` : ""}
-        </p>
-      </section>
+        {/* The figures, computed rather than asserted. */}
+        <dl className="mt-8 grid grid-cols-2 gap-px border border-border bg-border sm:grid-cols-3 lg:grid-cols-6">
+          {stats.map((s) => (
+            <div key={s.label} className="bg-background px-4 py-5">
+              <dt className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                {s.label}
+              </dt>
+              <dd className="mt-1 font-serif text-3xl tabular-nums">{s.value}</dd>
+            </div>
+          ))}
+        </dl>
 
-      {/* Collection summary */}
-      <section
-        style={{
-          marginTop: "5vh",
-          maxWidth: 1100,
-          marginInline: "auto",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: "1px",
-          background: "var(--line)",
-          border: "1px solid var(--line)",
-        }}
-      >
-        {[
-          ["Works in the collection", counts?.works ?? 0],
-          ["Artists", "—"],
-          ["On view", "—"],
-        ].map(([label, value]) => (
-          <div key={String(label)} style={{ background: "var(--background)", padding: "1.6rem" }}>
-            <p className="overline">{label}</p>
-            <p
-              className="serif"
-              style={{ marginTop: "0.5rem", fontSize: "2rem", fontWeight: 300 }}
-            >
-              {value}
-            </p>
+        <section className="mt-14">
+          <div className="mb-6 flex items-baseline justify-between border-b border-border pb-3">
+            <h2 className="font-serif text-2xl">The works</h2>
+            <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Accession · image · artist · title · medium · year · status
+            </span>
           </div>
-        ))}
-      </section>
-
-      {/* Recent works */}
-      <section style={{ marginTop: "6vh", maxWidth: 1100, marginInline: "auto" }}>
-        <hr className="rule" />
-        <h2 className="serif" style={{ marginTop: "2.4rem", fontWeight: 400, fontSize: "1.6rem" }}>
-          Recently touched
-        </h2>
-        <div
-          style={{
-            marginTop: "1.6rem",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-            gap: "2rem 1.4rem",
-          }}
-        >
-          {recent.map(w => {
-            const img = w.images?.find(i => i.position === 0)?.url ?? w.images?.[0]?.url;
-            return (
-              <a
-                key={w.id}
-                href={`https://coleccionreyesveray.com/art/${w.slug ?? w.id}`}
-                style={{ textDecoration: "none", color: "inherit", display: "block" }}
-              >
-                <div
-                  style={{
-                    aspectRatio: "1",
-                    background: "#f2f1ef",
-                    display: "grid",
-                    placeItems: "center",
-                    overflow: "hidden",
-                  }}
-                >
-                  {img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={img}
-                      alt={w.name}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  ) : (
-                    <span className="overline">No image</span>
-                  )}
-                </div>
-                <p className="serif" style={{ marginTop: "0.7rem", fontSize: "1.05rem" }}>
-                  {w.artist ?? "Unknown artist"}
-                </p>
-                <p className="serif" style={{ color: "var(--muted)", fontSize: "0.95rem" }}>
-                  {w.title ?? w.name}
-                  {w.year ? `, ${w.year}` : ""}
-                </p>
-                <p className="overline" style={{ marginTop: "0.3rem" }}>
-                  {w.inventoryNumber ?? w.status}
-                </p>
-              </a>
-            );
-          })}
-        </div>
-      </section>
-
-      <footer
-        style={{
-          marginTop: "10vh",
-          borderTop: "1px solid var(--line)",
-          paddingTop: "2rem",
-          display: "flex",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "1rem",
-        }}
-      >
-        <span className="wordmark" style={{ fontSize: "0.68rem" }}>
-          Vitrine by AXXES
-        </span>
-        <span className="overline">© MMXXVI</span>
-      </footer>
+          <WorksTable
+            rows={rows}
+            total={total}
+            page={page}
+            perPage={perPage}
+            facets={facets}
+            canEdit={canEdit(ctx.role)}
+          />
+        </section>
+      </div>
     </main>
   );
-}
-
-function sqlCount() {
-  return sql`count(*)`.mapWith(Number);
 }

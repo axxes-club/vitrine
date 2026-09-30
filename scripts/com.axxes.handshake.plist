@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Handshake (AXXES sign-in), supervised by launchd.
+
+  Runs alongside Vitrine and is not optional: Vitrine redirects anyone without
+  a session to Handshake, and the two verify the same session cookie because
+  they share BETTER_AUTH_SECRET. With Handshake down, /admin dead-ends at the
+  sign-in page and nothing can reach the desk.
+
+  See com.axxes.vitrine.plist for why each server gets its own plist.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.axxes.handshake</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>export PATH="/Users/admin/.nvm/versions/node/v20.20.2/bin:/usr/bin:/bin:/usr/sbin:/sbin"; cd /Users/admin/Developer/handshake.axxes.club && exec npx next dev -p 3101</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/admin/Developer/handshake.axxes.club</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/admin/.nvm/versions/node/v20.20.2/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/axxes-local/handshake.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/axxes-local/handshake.err.log</string>
+</dict>
+</plist>
