@@ -20,6 +20,7 @@ export function CollectionSwitcher({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
   if (collections.length < 2) return null;
@@ -28,20 +29,31 @@ export function CollectionSwitcher({
 
   async function choose(slug: string) {
     setPending(true);
-    await fetch("/api/collection", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug }),
-    });
-    setOpen(false);
-    setPending(false);
-    router.refresh();
+    setError(null);
+    try {
+      const response = await fetch("/api/collection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      if (!response.ok) {
+        setError("Could not switch collection. Please try again.");
+        return;
+      }
+      setOpen(false);
+      router.refresh();
+    } catch {
+      setError("Could not switch collection. Please try again.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
     <div style={{ position: "relative" }}>
       <button
         type="button"
+        disabled={pending}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -66,6 +78,7 @@ export function CollectionSwitcher({
         <span aria-hidden style={{ fontSize: "0.55rem" }}>▾</span>
       </button>
 
+      {error && <p role="alert">{error}</p>}
       {open && (
         <ul
           role="listbox"
@@ -89,6 +102,7 @@ export function CollectionSwitcher({
               <li key={c.id}>
                 <button
                   type="button"
+                  disabled={pending}
                   role="option"
                   aria-selected={isActive}
                   onClick={() => choose(c.slug)}
