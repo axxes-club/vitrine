@@ -10,8 +10,8 @@ type State =
   | { kind: "done" }
   | { kind: "error"; message: string };
 
-export default function WaitlistForm() {
-  const [email, setEmail] = useState("");
+export default function WaitlistForm({ initialEmail = "" }: { initialEmail?: string }) {
+  const [email, setEmail] = useState(initialEmail);
   const [state, setState] = useState<State>({ kind: "idle" });
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {

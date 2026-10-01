@@ -1,0 +1,6 @@
+import assert from 'node:assert/strict';import{test}from'node:test';import https from 'node:https';
+const origin=process.env.VITRINE_TEST_ORIGIN;const live=origin?test:test.skip;
+function get(path){return new Promise((resolve,reject)=>{const url=new URL(path,origin);const options=process.env.VITRINE_TEST_IP?{family:4,lookup:(_host,_options,cb)=>cb(null,process.env.VITRINE_TEST_IP,4)}:{};const req=https.get(url,options,res=>{let body='';res.on('data',c=>body+=c);res.on('end',()=>resolve({status:res.statusCode,body,location:res.headers.location}))});req.on('error',reject);req.setTimeout(15000,()=>req.destroy(new Error('HTTP deadline')))})}
+live('public landing serves the premium design, prices, login and registration',async()=>{const r=await get('/');assert.equal(r.status,200);assert.ok(r.body.includes('Exceptional art.'));assert.ok(r.body.includes('Collector'));assert.ok(r.body.includes('/register'));assert.ok(r.body.includes('/sign-in'))});
+live('registration page has real account fields',async()=>{const r=await get('/register');assert.equal(r.status,200);assert.ok(r.body.includes('type="email"'));assert.ok(r.body.includes('type="password"'));assert.ok(r.body.includes('Create account'))});
+live('ORC software requires a signed-in account',async()=>{const r=await get('/orc');assert.equal(r.status,307);assert.equal(r.location,'/sign-in')});

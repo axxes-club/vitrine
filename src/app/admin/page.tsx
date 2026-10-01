@@ -41,6 +41,8 @@ export default async function AdminPage({
         collectionName={ctx.tenant.name}
         currentPlan={ctx.subscription?.plan?.name ?? null}
         plans={await vitrinePlans()}
+        collections={ctx.collections}
+        activeSlug={ctx.tenant.slug}
       />
     );
   }
@@ -111,7 +113,7 @@ export default async function AdminPage({
           description="The collection, as it stands."
           actions={
             <div className="flex items-center gap-2">
-              <Link href="/viewing-room" className="text-xs underline underline-offset-4">Viewing room</Link>
+              <Link href="/orc/viewing-room" className="text-xs underline underline-offset-4">Viewing room</Link>
               <AllAppsSwitcher />
               {ctx.collections.length > 1 && <CollectionSwitcher
                 collections={ctx.collections}

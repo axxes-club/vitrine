@@ -1,6 +1,5 @@
 import Image from "next/image";
 import { ArrowUpRight, ArrowRight, Check, ShieldCheck, Layers, FileText, MapPin, Search, LayoutGrid, List, ChevronDown, LockKeyhole, Plus } from "lucide-react";
-import WaitlistForm from "@/app/WaitlistForm";
 import { vitrinePlans, type Plan } from "@/lib/billing";
 import styles from "./landing.module.css";
 
@@ -75,7 +74,7 @@ export default async function Home() {
         </nav>
         <div className={styles.headerActions}>
           <a className={styles.signIn} href="/sign-in">Sign in</a>
-          <a className={styles.headerCta} href="#waitlist">Request access <ArrowUpRight size={15} aria-hidden="true" /></a>
+          <a className={styles.headerCta} href="/register">Create account <ArrowUpRight size={15} aria-hidden="true" /></a>
         </div>
       </header>
 
@@ -85,7 +84,7 @@ export default async function Home() {
           <h1 id="hero-heading">Exceptional art.<br />An extraordinary<br /><em>collection.</em></h1>
           <p className={styles.heroDescription}>The collection you have built deserves a world-class home. Catalog, care for, and preserve it with Vitrine — art collection software for those who see more.</p>
           <div className={styles.heroActions}>
-            <a className={styles.button} href="#waitlist">Request an invitation <ArrowUpRight size={18} aria-hidden="true" /></a>
+            <a className={styles.button} href="/register">Create your account <ArrowUpRight size={18} aria-hidden="true" /></a>
             <a className={styles.textLink} href="#platform">Explore Vitrine <ArrowRight size={16} aria-hidden="true" /></a>
           </div>
           <p className={styles.heroNote}><LockKeyhole size={12} aria-hidden="true" /> Private by design. Yours, always.</p>
@@ -103,7 +102,7 @@ export default async function Home() {
 
       <section className={styles.principles} aria-label="Collection principles">
         <span>Serious collecting.<br /><strong>Considered software.</strong></span>
-        <p><LockKeyhole size={18} aria-hidden="true" /> Invitation-only access</p>
+        <p><LockKeyhole size={18} aria-hidden="true" /> Private collection access</p>
         <p><Layers size={18} aria-hidden="true" /> Unlimited works</p>
         <p><ArrowUpRight size={18} aria-hidden="true" /> Your records. Your ownership.</p>
       </section>
@@ -137,16 +136,16 @@ export default async function Home() {
 
       <section className={styles.collectionSection} id="collection" aria-labelledby="collection-heading">
         <div className={styles.collectionArtwork}><Image src="/art/mercado-guanabana.jpg" alt="A soursop fruit opened to reveal its pale flesh and dark seeds, presented like a botanical specimen." width={1730} height={1800} sizes="(max-width: 700px) 85vw, 40vw" /><span>Carlos Mercado · <em>Guanabana</em>, 2012</span></div>
-        <div className={styles.collectionCopy}><p className={styles.eyebrow}>MORE THAN AN INVENTORY</p><h2 id="collection-heading">You collect<br />with intention.<br /><em>So do we.</em></h2><p>A collection is a lifetime of decisions. The work that moved you. The artist you believed in. The piece you could not leave behind.</p><p>Vitrine keeps the record as considered as the collection itself — so its story stays intact, wherever it goes next.</p><a className={styles.textLink} href="#waitlist">Give your collection a home <ArrowUpRight size={16} aria-hidden="true" /></a><div className={styles.collectionCredit}><span>FEATURING WORKS FROM</span><strong>Colección Reyes-Veray</strong><span>Puerto Rico</span></div></div>
+        <div className={styles.collectionCopy}><p className={styles.eyebrow}>MORE THAN AN INVENTORY</p><h2 id="collection-heading">You collect<br />with intention.<br /><em>So do we.</em></h2><p>A collection is a lifetime of decisions. The work that moved you. The artist you believed in. The piece you could not leave behind.</p><p>Vitrine keeps the record as considered as the collection itself — so its story stays intact, wherever it goes next.</p><a className={styles.textLink} href="/register">Give your collection a home <ArrowUpRight size={16} aria-hidden="true" /></a><div className={styles.collectionCredit}><span>FEATURING WORKS FROM</span><strong>Colección Reyes-Veray</strong><span>Puerto Rico</span></div></div>
       </section>
 
       <section className={styles.membership} id="membership" aria-labelledby="membership-heading">
         <div className={styles.sectionHeading}><div><p className={styles.eyebrow}>A MEMBERSHIP THAT FITS</p><h2 id="membership-heading">Your collection.<br /><em>Your next chapter.</em></h2></div><p>One membership. One collection. Unlimited works. Choose the level of support your collection deserves.</p></div>
-        <div className={styles.plans}>{plans.map((plan) => <article className={`${styles.plan} ${plan.key === "collector-pro" ? styles.planFeatured : ""}`} key={plan.key}><div className={styles.planHeader}><span>{plan.name}</span>{plan.key === "collector-pro" && <span className={styles.planBadge}>ASSISTED CATALOGUING</span>}</div><p className={styles.price}>${(plan.priceCents / 100).toFixed(0)}<span> / month</span></p><p className={styles.planBlurb}>{plan.blurb}</p><a className={styles.button} href="#waitlist">Request {plan.name} <ArrowUpRight size={16} aria-hidden="true" /></a><ul>{plan.features.map(feature => <li key={feature}><Check size={15} aria-hidden="true" /><span>{feature}</span></li>)}</ul></article>)}</div>
+        <div className={styles.plans}>{plans.map((plan) => <article className={`${styles.plan} ${plan.key === "collector-pro" ? styles.planFeatured : ""}`} key={plan.key}><div className={styles.planHeader}><span>{plan.name}</span>{plan.key === "collector-pro" && <span className={styles.planBadge}>ASSISTED CATALOGUING</span>}</div><p className={styles.price}>${(plan.priceCents / 100).toFixed(0)}<span> / month</span></p><p className={styles.planBlurb}>{plan.blurb}</p><a className={styles.button} href={`/register?plan=${encodeURIComponent(plan.key)}`}>Choose {plan.name} <ArrowUpRight size={16} aria-hidden="true" /></a><ul>{plan.features.map(feature => <li key={feature}><Check size={15} aria-hidden="true" /><span>{feature}</span></li>)}</ul></article>)}</div>
         <p className={styles.membershipNote}><LockKeyhole size={13} aria-hidden="true" /> Your collection remains yours. Export your records in CSV or JSON, on either plan.</p>
       </section>
 
-      <section className={styles.invitation} id="waitlist" aria-labelledby="invitation-heading"><p className={styles.eyebrow}>AN INVITATION TO SOMETHING EXCEPTIONAL</p><h2 id="invitation-heading">The next chapter<br />of your collection <em>starts here.</em></h2><p>Vitrine is available by invitation. Leave your email and we’ll be in touch when a place is ready for your collection.</p><WaitlistForm /><span className={styles.invitationNote}>Already a member? <a href="/sign-in">Sign in <ArrowUpRight size={12} aria-hidden="true" /></a></span></section>
+      <section className={styles.invitation} id="waitlist" aria-labelledby="invitation-heading"><p className={styles.eyebrow}>AN INVITATION TO SOMETHING EXCEPTIONAL</p><h2 id="invitation-heading">The next chapter<br />of your collection <em>starts here.</em></h2><p>Create your Vitrine account, then arrange the membership that fits your collection.</p><a className={styles.button} href="/register">Create your account <ArrowUpRight size={18} aria-hidden="true" /></a><span className={styles.invitationNote}>Already a member? <a href="/sign-in">Sign in <ArrowUpRight size={12} aria-hidden="true" /></a></span></section>
 
       <footer className={styles.footer}><div><a className={styles.wordmark} href="#top">vitrine<span className={styles.brandDot}>.</span></a><p>For the art. For the story. For the future.</p></div><div><a href="#platform">The platform</a><a href="#membership">Membership</a><a href="/sign-in">Sign in</a></div><span>© {new Date().getFullYear()} Vitrine<br />An AXXES product</span></footer>
     </main>
