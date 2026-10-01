@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { AwaitingAccess } from "@/components/awaiting-access";
@@ -110,6 +111,7 @@ export default async function AdminPage({
           description="The collection, as it stands."
           actions={
             <div className="flex items-center gap-2">
+              <Link href="/viewing-room" className="text-xs underline underline-offset-4">Viewing room</Link>
               <AllAppsSwitcher />
               {ctx.collections.length > 1 && <CollectionSwitcher
                 collections={ctx.collections}

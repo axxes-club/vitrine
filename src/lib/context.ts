@@ -1,4 +1,5 @@
 import "server-only";
+import { authorizedCollections } from "./collection-access";
 import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, eq, inArray, isNull, or } from "drizzle-orm";
@@ -54,17 +55,6 @@ export type Collection = {
  *     against the account that did.
  */
 
-/** AXXES team rank -> what they may do at the desk. */
-function deskRoleFor(teamRole: string | null | undefined): VitrineRole | null {
-  return teamRole === "owner" || teamRole === "admin"
-    ? "admin"
-    : teamRole === "manager" || teamRole === "member"
-      ? "registrar"
-      : teamRole === "viewer"
-        ? "viewer"
-        : null;
-}
-
 /**
  * Every collection this person may open a desk on.
  *
@@ -115,21 +105,7 @@ export async function getCollections(userId: string): Promise<Collection[]> {
       )
     );
 
-  return orgs.flatMap((org) => {
-    const seat = seats.find((s) => s.tenantId === org.id);
-    const role = deskRoleFor(seat?.role);
-    if (!role) return [];
-    const isDirect = org.slug === COLLECTION_TENANT_SLUG;
-    return [
-      {
-        id: org.id,
-        name: org.name,
-        slug: org.slug,
-        role,
-        viaOrg: isDirect ? null : org.name,
-      },
-    ];
-  });
+  return authorizedCollections(orgs, seats, COLLECTION_TENANT_SLUG, ENTRY_ORG_NAMES);
 }
 
 export async function getContext() {
