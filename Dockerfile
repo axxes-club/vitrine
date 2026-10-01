@@ -10,6 +10,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN if [ -f package-lock.json ]; then npm ci || npm install --no-audit --no-fund; \
     else corepack enable && pnpm install --frozen-lockfile; fi
+RUN node --experimental-strip-types --test tests/collection-access.test.mjs
 RUN mkdir -p public && if [ -d prisma ]; then npx prisma generate; fi
 RUN --mount=type=secret,id=build-env,target=/app/.env.production if [ -f package-lock.json ]; then npm run build; else pnpm run build; fi \
   && rm -f .next/standalone/.env .next/standalone/.env.*

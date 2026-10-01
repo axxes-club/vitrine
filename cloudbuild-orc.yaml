@@ -1,0 +1,92 @@
+{
+  "substitutions": {
+    "_TAG": "manual"
+  },
+  "steps": [
+    {
+      "id": "build-env",
+      "name": "gcr.io/google.com/cloudsdktool/cloud-sdk:slim",
+      "entrypoint": "bash",
+      "args": [
+        "-ec",
+        "umask 077; gcloud secrets versions access latest --secret=vitrine-app-env > .env.production"
+      ]
+    },
+    {
+      "id": "linux-build-and-check",
+      "name": "gcr.io/cloud-builders/docker",
+      "args": [
+        "build",
+        "--secret",
+        "id=build-env,src=.env.production",
+        "--target",
+        "build",
+        "-t",
+        "ci-check:$BUILD_ID",
+        "."
+      ],
+      "env": [
+        "DOCKER_BUILDKIT=1"
+      ]
+    },
+    {
+      "id": "runtime-image",
+      "name": "gcr.io/cloud-builders/docker",
+      "args": [
+        "build",
+        "--secret",
+        "id=build-env,src=.env.production",
+        "-t",
+        "us-west1-docker.pkg.dev/$PROJECT_ID/ci-vitrine/vitrine:${_TAG}-$BUILD_ID",
+        "."
+      ],
+      "env": [
+        "DOCKER_BUILDKIT=1"
+      ]
+    },
+    {
+      "id": "export-runtime-layers",
+      "name": "gcr.io/cloud-builders/docker",
+      "args": [
+        "save",
+        "-o",
+        ".ci-image.tar",
+        "us-west1-docker.pkg.dev/$PROJECT_ID/ci-vitrine/vitrine:${_TAG}-$BUILD_ID"
+      ]
+    },
+    {
+      "id": "verify-no-secret-layers",
+      "name": "gcr.io/google.com/cloudsdktool/cloud-sdk:slim",
+      "entrypoint": "python3",
+      "args": [
+        "scripts/gcp-scan-image.py",
+        ".ci-image.tar",
+        ".env.production"
+      ]
+    },
+    {
+      "id": "remove-build-inputs",
+      "name": "gcr.io/google.com/cloudsdktool/cloud-sdk:slim",
+      "entrypoint": "bash",
+      "args": [
+        "-ec",
+        "rm -f .ci-image.tar .env.production"
+      ]
+    },
+    {
+      "id": "push-image",
+      "name": "gcr.io/cloud-builders/docker",
+      "args": [
+        "push",
+        "us-west1-docker.pkg.dev/$PROJECT_ID/ci-vitrine/vitrine:${_TAG}-$BUILD_ID"
+      ]
+    }
+  ],
+  "images": [
+    "us-west1-docker.pkg.dev/$PROJECT_ID/ci-vitrine/vitrine:${_TAG}-$BUILD_ID"
+  ],
+  "options": {
+    "logging": "CLOUD_LOGGING_ONLY"
+  },
+  "timeout": "1800s"
+}
