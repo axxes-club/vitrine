@@ -231,7 +231,7 @@ function WorksRows({
                 {w.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={w.image}
+                    src={w.image.startsWith("https://storage.googleapis.com/gravy-meta-orc-web/v1/") ? `${w.image}.w320.webp` : w.image}
                     alt=""
                     loading="lazy"
                     className="h-12 w-12 border border-border object-cover"
