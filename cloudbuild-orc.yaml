@@ -80,6 +80,15 @@
         "push",
         "us-west1-docker.pkg.dev/$PROJECT_ID/ci-vitrine/vitrine:${_TAG}-$BUILD_ID"
       ]
+    },
+    {
+      "id": "release",
+      "name": "gcr.io/google.com/cloudsdktool/cloud-sdk:slim",
+      "entrypoint": "bash",
+      "args": [
+        "-c",
+        "set -euo pipefail\nimage='us-west1-docker.pkg.dev/$PROJECT_ID/ci-vitrine/vitrine:${_TAG}-$BUILD_ID'\ndigest=$(gcloud artifacts docker images describe \"$$image\" --format='value(image_summary.digest)')\nexport CI_SERVICE='vitrine-app' CI_PUBLIC_HEALTH_URL='https://vitrine.axxes.app/' CI_BUILD_ID='$BUILD_ID' CI_IMAGE=\"$${image%:*}@$$digest\"\npython3 scripts/gcp-release.py\n"
+      ]
     }
   ],
   "images": [
