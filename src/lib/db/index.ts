@@ -10,14 +10,23 @@ const neonDb = () => drizzle(neon(url), { schema });
 const globalForDb = globalThis as unknown as { axxesPgPool?: Pool };
 
 // Reuse one bounded pool per process, including separately loaded route bundles.
-function postgresDb() {
+export function getPostgresPool() {
   const pool = globalForDb.axxesPgPool ??= new Pool({
     connectionString: url,
     max: 2,
     connectionTimeoutMillis: 10_000,
     idleTimeoutMillis: 30_000,
   });
-  return drizzlePg(pool, { schema });
+  if (pool.listenerCount("error") === 0) {
+    pool.on("error", (error: NodeJS.ErrnoException) => {
+      console.error("[db] PostgreSQL idle connection error", { code: error.code ?? "unknown" });
+    });
+  }
+  return pool;
+}
+
+function postgresDb() {
+  return drizzlePg(getPostgresPool(), { schema });
 }
 
 // Both connections expose the existing Drizzle query API during the cutover.
