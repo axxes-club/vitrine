@@ -63,7 +63,7 @@ export type Collection = {
  *
  *   - a direct seat in the collection (the normal case)
  *   - membership of an entry organization such as AXXES CLUB, which is the
- *     company and can reach any collection
+ *     company and can reach the pinned collection
  *   - a superadmin, who is never locked out of the suite's own front door
  *
  * A valid invitation is handled separately: it gets someone through the door
@@ -75,35 +75,22 @@ export type Collection = {
  * it has records would be a desk that cannot be filled.
  */
 export async function getCollections(userId: string): Promise<Collection[]> {
-  const orgs = await db
-    .select({ id: tenants.id, name: tenants.name, slug: tenants.slug })
-    .from(tenants)
-    .where(
-      and(
-        isNull(tenants.deletedAt),
-        or(
-          inArray(tenants.name, ENTRY_ORG_NAMES),
-          // A pinned deployment serves exactly one collection.
-          ...(COLLECTION_TENANT_SLUG ? [eq(tenants.slug, COLLECTION_TENANT_SLUG)] : [])
-        )
-      )
-    );
-
-  if (!orgs.length) return [];
-
   const seats = await db
     .select({ role: tenantMemberships.role, tenantId: tenantMemberships.tenantId })
     .from(tenantMemberships)
-    .where(
-      and(
-        inArray(
-          tenantMemberships.tenantId,
-          orgs.map((o) => o.id)
-        ),
-        eq(tenantMemberships.userId, userId),
-        isNull(tenantMemberships.deletedAt)
+    .where(and(eq(tenantMemberships.userId, userId), isNull(tenantMemberships.deletedAt)));
+
+  const orgs = await db
+    .select({ id: tenants.id, name: tenants.name, slug: tenants.slug })
+    .from(tenants)
+    .where(and(
+      isNull(tenants.deletedAt),
+      or(
+        inArray(tenants.name, ENTRY_ORG_NAMES),
+        ...(COLLECTION_TENANT_SLUG ? [eq(tenants.slug, COLLECTION_TENANT_SLUG)] : []),
+        ...(seats.length ? [inArray(tenants.id, seats.map(s => s.tenantId))] : [])
       )
-    );
+    ));
 
   return authorizedCollections(orgs, seats, COLLECTION_TENANT_SLUG, ENTRY_ORG_NAMES);
 }
@@ -206,7 +193,7 @@ export async function getAccess(
     return { allowed: true, reason: "ok", planName: "AXXES internal" };
   }
 
-  // AXXES CLUB reaches any collection without each one being individually
+  // AXXES CLUB reaches the pinned collection without it being individually
   // subscribed; it is the company demonstrating its own product.
   if (ctx.viaOrg && ENTRY_ORG_NAMES.includes(ctx.viaOrg)) {
     return { allowed: true, reason: "ok", planName: "AXXES CLUB" };

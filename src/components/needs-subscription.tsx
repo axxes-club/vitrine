@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { CollectionSwitcher } from "./collection-switcher";
+import WaitlistForm from "@/app/WaitlistForm";
 import type { Plan } from "@/lib/billing";
 
 /**
@@ -20,12 +21,15 @@ export function NeedsSubscription({
   collectionName,
   currentPlan,
   plans,
+  collections,
+  activeSlug,
 }: {
   collectionName: string;
   currentPlan: string | null;
   plans: Plan[];
+  collections: Array<{id:string;name:string;slug:string;role:string}>;
+  activeSlug: string;
 }) {
-  const [sent, setSent] = useState(false);
 
   return (
     <main
@@ -36,7 +40,8 @@ export function NeedsSubscription({
         marginInline: "auto",
       }}
     >
-      <p className="overline">The Desk · Vitrine</p>
+      <CollectionSwitcher collections={collections} activeSlug={activeSlug} />
+      <p className="overline" style={{marginTop:24}}>The Desk · Vitrine</p>
 
       <h1
         className="serif"
@@ -67,7 +72,7 @@ export function NeedsSubscription({
         {currentPlan
           ? `${collectionName} is currently on ${currentPlan}, which does not include Vitrine.`
           : `${collectionName} does not have a plan yet.`}{" "}
-        Choose one and the desk opens.
+        Request membership activation to open the desk.
       </p>
 
       <div
@@ -119,29 +124,7 @@ export function NeedsSubscription({
               ))}
             </ul>
 
-            <a
-              href={`mailto:members.axxes.club?subject=${encodeURIComponent(
-                `Start ${p.name} for ${collectionName}`
-              )}&body=${encodeURIComponent(
-                `Collection: ${collectionName}\nPlan: ${p.name} ($${(
-                  p.priceCents / 100
-                ).toFixed(0)}/month)\n\n`
-              )}`}
-              style={{
-                display: "block",
-                marginTop: "2rem",
-                textAlign: "center",
-                padding: "0.85rem 1.2rem",
-                background: "#111111",
-                color: "#fdfcfc",
-                textDecoration: "none",
-                fontSize: "0.78rem",
-                letterSpacing: "0.08em",
-                borderRadius: 999,
-              }}
-            >
-              Start {p.name}
-            </a>
+            <a href="/#membership" style={{display:"block",marginTop:"2rem",textDecoration:"underline"}}>Explore {p.name}</a>
           </div>
         ))}
       </div>
@@ -155,10 +138,11 @@ export function NeedsSubscription({
           lineHeight: 1.6,
         }}
       >
-        {sent ? "Noted." : "Plans are per organization and cover one collection. "}
+        Plans are per organization and cover one collection.
         Nothing is charged from this page — the AXXES team sets the plan up with
         you and the desk opens as soon as it is on.
       </p>
+      <div style={{marginTop:24}}><WaitlistForm /></div>
     </main>
   );
 }

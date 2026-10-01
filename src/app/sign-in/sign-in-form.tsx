@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
@@ -18,6 +19,7 @@ const SSO_AVAILABLE = Boolean(
 );
 
 export function SignInForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export function SignInForm() {
     try {
       await authClient.signIn.social({
         provider: "axxes",
-        callbackURL: "/admin",
+        callbackURL: "/orc",
       });
       // The browser leaves for Handshake; nothing to do on success.
     } catch {
@@ -46,17 +48,19 @@ export function SignInForm() {
     if (busy) return;
     setBusy("password");
     setError(null);
+    try {
     const { error } = await authClient.signIn.email({
       // Stored lowercased; fold the input so Me.com still matches me.com.
       email: email.trim().toLowerCase(),
       password,
-      callbackURL: "/admin",
+      callbackURL: "/orc",
     });
     if (error) {
       setBusy(null);
       setError("That email or password doesn't match our records.");
     }
-    // On success better-auth navigates to the callback URL.
+    if (!error) { router.replace("/orc"); router.refresh(); }
+    } catch { setBusy(null); setError("We couldn’t connect. Please try again."); }
   }
 
   const inputStyle: React.CSSProperties = {

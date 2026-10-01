@@ -90,9 +90,10 @@ export const auth = betterAuth({
     `https://*.${parentDomain}`,
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
   ],
-  advanced: cookieDomain
-    ? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } }
-    : undefined,
+  advanced: {
+    cookiePrefix: process.env.AUTH_COOKIE_PREFIX || "better-auth",
+    ...(cookieDomain ? { crossSubDomainCookies: { enabled: true, domain: cookieDomain } } : {}),
+  },
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: { user, session, account, verification },
