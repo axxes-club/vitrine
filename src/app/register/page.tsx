@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { auth, getAppSession } from "@/lib/auth";
 import { vitrinePlans } from "@/lib/billing";
 import { RegisterForm } from "./register-form";
 import styles from "../account.module.css";
 export const metadata = { title: "Create your account — Vitrine" };
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
-  if (await auth.api.getSession({ headers: await headers() })) redirect("/orc");
+  if (await getAppSession(await headers())) redirect("/orc");
   const requested = (await searchParams).plan;
   const plans = (await vitrinePlans()).filter(p => p.maxApps === 1);
   const selectedPlan = plans.some(p => p.key === requested) ? requested : undefined;

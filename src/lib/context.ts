@@ -3,9 +3,9 @@ import { authorizedCollections } from "./collection-access";
 import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
-import { auth, COLLECTION_TENANT_SLUG, ENTRY_ORG_NAMES, HANDSHAKE_URL } from "@/lib/auth";
+import { auth, getAppSession, COLLECTION_TENANT_SLUG, ENTRY_ORG_NAMES, HANDSHAKE_URL } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { tenants, tenantMemberships, plans, subscriptions } from "@/lib/db/schema";
+import { user, tenants, tenantMemberships, plans, subscriptions } from "@/lib/db/schema";
 import { hasValidInvite } from "@/lib/invite";
 import { getSubscription } from "@/lib/billing";
 
@@ -97,12 +97,12 @@ export async function getCollections(userId: string): Promise<Collection[]> {
 }
 
 export async function getContext() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAppSession(await headers());
   if (!session?.user) return null;
 
-  const isSuperadmin = Boolean(
-    (session.user as { isSuperadmin?: boolean }).isSuperadmin,
-  );
+  const [currentUser]=await db.select({isSuperadmin:user.isSuperadmin}).from(user).where(eq(user.id,session.user.id)).limit(1);
+  if(!currentUser)return null;
+  const isSuperadmin = currentUser.isSuperadmin===true;
   const invited = await hasValidInvite();
 
   const collections = await getCollections(session.user.id);

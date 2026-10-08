@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth, HANDSHAKE_URL } from "@/lib/auth";
+import { auth, getAppSession, HANDSHAKE_URL } from "@/lib/auth";
 import { SignInForm } from "./sign-in-form";
 import styles from "../account.module.css";
 export const metadata = { title: "Sign in — Vitrine" };
 export default async function SignInPage() {
-  if (await auth.api.getSession({ headers: await headers() })) redirect("/orc");
+  if (await getAppSession(await headers())) redirect("/orc");
   if (HANDSHAKE_URL) {
     const h = await headers();
     const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host")}`;

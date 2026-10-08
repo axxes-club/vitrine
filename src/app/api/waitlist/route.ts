@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, getAppSession } from "@/lib/auth";
 import { getPostgresPool } from "@/lib/db";
 
 const pool = getPostgresPool();
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const plan = typeof body.plan === "string" ? body.plan : null;
   if (plan) {
     if (!["collector", "collector-pro"].includes(plan)) return NextResponse.json({error:"Choose a valid Vitrine membership."},{status:400});
-    const session = await auth.api.getSession({headers:req.headers});
+    const session = await getAppSession(req.headers);
     if (!session?.user || session.user.email.toLowerCase() !== email) return NextResponse.json({error:"Sign in to request your membership."},{status:401});
   }
   try {

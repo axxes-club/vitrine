@@ -1,0 +1,8 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const ts=require('typescript');
+function context(){
+ const m={exports:{}};const table=new Proxy({},{get:(_t,p)=>String(p)});
+ const db={select:(fields)=>{const rows='isSuperadmin' in fields?[{isSuperadmin:false}]:'role' in fields?[]:[{id:'collection',name:'Collection',slug:'collection'}];const chain={from:()=>chain,where:()=>chain,limit:()=>chain,then:(resolve)=>Promise.resolve(rows).then(resolve)};return chain;}};
+ const modules={'server-only':{},'./collection-access':{authorizedCollections:()=>[]},'next/headers':{headers:async()=>new Headers(),cookies:async()=>({get:()=>undefined})},'next/navigation':{redirect:()=>{}},'drizzle-orm':Object.fromEntries(['and','eq','inArray','isNull','or','sql'].map(k=>[k,()=>({})])),'@/lib/auth':{getAppSession:async()=>({user:{id:'actor',isSuperadmin:true}}),COLLECTION_TENANT_SLUG:'collection',ENTRY_ORG_NAMES:[]},'@/lib/db':{db},'@/lib/db/schema':{user:table,tenants:table,tenantMemberships:table,plans:table,subscriptions:table},'@/lib/invite':{hasValidInvite:async()=>true},'@/lib/billing':{getSubscription:async()=>null}};
+ vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/context.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:m,exports:m.exports,Headers,require:id=>{if(!(id in modules))throw new Error(id);return modules[id];}});return m.exports;
+}
+test('revoked superadmin cache and invitation grant no implicit collection access',async()=>{const result=await context().getContext();assert.equal(result.isSuperadmin,false);assert.equal(result.tenant,null);assert.equal(result.role,null);});
