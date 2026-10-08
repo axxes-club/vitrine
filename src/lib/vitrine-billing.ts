@@ -1,4 +1,4 @@
-import type { PlanCatalog } from "@/lib/plan-billing"
+import type { PlanCatalog } from "./plan-billing-core"
 
 /** Vitrine plans sold on AXXES Payments, by Stripe lookup key → shared `plans.key`. */
 export const VITRINE_CATALOG: PlanCatalog = {
