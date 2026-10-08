@@ -3,6 +3,7 @@ import { desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { AwaitingAccess } from "@/components/awaiting-access";
 import { NeedsSubscription } from "@/components/needs-subscription";
+import { ManageSubscriptionButton } from "@/components/billing-buttons";
 import { AllAppsSwitcher } from "@/components/all-apps-switcher";
 import { CollectionSwitcher } from "@/components/collection-switcher";
 import { PageHeader } from "@/components/layout/page-header";
@@ -43,6 +44,8 @@ export default async function AdminPage({
         plans={await vitrinePlans()}
         collections={ctx.collections}
         activeSlug={ctx.tenant.slug}
+        canSubscribe={ctx.role === "admin"}
+        returned={typeof (await searchParams).subscription === "string" ? ((await searchParams).subscription as string) : null}
       />
     );
   }
@@ -114,6 +117,7 @@ export default async function AdminPage({
           actions={
             <div className="flex items-center gap-2">
               <Link href="/orc/viewing-room" className="text-xs underline underline-offset-4">Viewing room</Link>
+              {ctx.role === "admin" && ctx.subscription && ctx.subscription.status !== "incomplete" && access.planName !== "AXXES internal" && access.planName !== "AXXES CLUB" && <ManageSubscriptionButton />}
               <AllAppsSwitcher />
               {ctx.collections.length > 1 && <CollectionSwitcher
                 collections={ctx.collections}

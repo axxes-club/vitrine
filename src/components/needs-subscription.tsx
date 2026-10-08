@@ -3,6 +3,10 @@
 import { CollectionSwitcher } from "./collection-switcher";
 import WaitlistForm from "@/app/WaitlistForm";
 import type { Plan } from "@/lib/billing";
+import { SubscribeButtons } from "./billing-buttons";
+
+/** Plans with prices on AXXES Payments (see src/lib/vitrine-billing.ts). */
+const SELLABLE = ["collector", "collector-pro"];
 
 /**
  * Signed in, seated, but the collection is not on a plan that includes Vitrine.
@@ -23,12 +27,17 @@ export function NeedsSubscription({
   plans,
   collections,
   activeSlug,
+  canSubscribe,
+  returned,
 }: {
   collectionName: string;
   currentPlan: string | null;
   plans: Plan[];
   collections: Array<{id:string;name:string;slug:string;role:string}>;
   activeSlug: string;
+  /** Collection administrators can buy; registrars and viewers see the plans only. */
+  canSubscribe: boolean;
+  returned: string | null;
 }) {
 
   return (
@@ -72,8 +81,11 @@ export function NeedsSubscription({
         {currentPlan
           ? `${collectionName} is currently on ${currentPlan}, which does not include Vitrine.`
           : `${collectionName} does not have a plan yet.`}{" "}
-        Request membership activation to open the desk.
+        {canSubscribe ? "Choose a plan to open the desk." : "Ask a collection administrator to choose a plan."}
       </p>
+      {returned === "incomplete" && (
+        <p role="status" style={{ marginTop: "1rem", color: "var(--muted)" }}>Checkout was not completed. Nothing was charged.</p>
+      )}
 
       <div
         style={{
@@ -124,7 +136,11 @@ export function NeedsSubscription({
               ))}
             </ul>
 
-            <a href="/#membership" style={{display:"block",marginTop:"2rem",textDecoration:"underline"}}>Explore {p.name}</a>
+            {canSubscribe && SELLABLE.includes(p.key) ? (
+              <SubscribeButtons plan={p.key} monthly={p.priceCents} annual={p.annualPriceCents} />
+            ) : (
+              <a href="/#membership" style={{display:"block",marginTop:"2rem",textDecoration:"underline"}}>Explore {p.name}</a>
+            )}
           </div>
         ))}
       </div>
@@ -138,11 +154,11 @@ export function NeedsSubscription({
           lineHeight: 1.6,
         }}
       >
-        Plans are per organization and cover one collection.
-        Nothing is charged from this page — the AXXES team sets the plan up with
-        you and the desk opens as soon as it is on.
+        Plans are per organization and cover one collection. Payment is taken
+        securely by AXXES Payments, and the desk opens as soon as it clears.
+        Cancel any time; the plan runs to the end of the period you paid for.
       </p>
-      <div style={{marginTop:24}}><WaitlistForm /></div>
+      {!canSubscribe && <div style={{marginTop:24}}><WaitlistForm /></div>}
     </main>
   );
 }

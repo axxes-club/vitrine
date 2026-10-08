@@ -62,7 +62,7 @@
         },
         {
           "name": "Test collection authorization",
-          "run": "node --experimental-strip-types --test tests/collection-access.test.mjs"
+          "run": "node --experimental-strip-types --test tests/collection-access.test.mjs tests/billing-catalog.test.mjs"
         },
         {
           "name": "Build on Linux with fixture configuration",
