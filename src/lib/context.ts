@@ -2,7 +2,7 @@ import "server-only";
 import { authorizedCollections } from "./collection-access";
 import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { auth, COLLECTION_TENANT_SLUG, ENTRY_ORG_NAMES, HANDSHAKE_URL } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { tenants, tenantMemberships, plans, subscriptions } from "@/lib/db/schema";
@@ -85,6 +85,7 @@ export async function getCollections(userId: string): Promise<Collection[]> {
     .from(tenants)
     .where(and(
       isNull(tenants.deletedAt),
+       sql`${tenants.status} NOT IN ('suspended', 'cancelled')`,
       or(
         inArray(tenants.name, ENTRY_ORG_NAMES),
         ...(COLLECTION_TENANT_SLUG ? [eq(tenants.slug, COLLECTION_TENANT_SLUG)] : []),
@@ -106,18 +107,17 @@ export async function getContext() {
 
   const collections = await getCollections(session.user.id);
 
-  // A superadmin or an invited guest with no seat anywhere still gets a desk:
-  // the invitation path falls back to the pinned collection, and a superadmin
-  // to the first one, so the door is never a dead end for the people who run
-  // the company.
+  // Platform administrators may select the configured collection. An invite
+  // grants entry only; collection access always requires a membership.
   let effective = collections;
-  if (!effective.length && (isSuperadmin || invited)) {
+  if (!effective.length && isSuperadmin) {
     const fallback = await db
       .select({ id: tenants.id, name: tenants.name, slug: tenants.slug })
       .from(tenants)
       .where(
         and(
           isNull(tenants.deletedAt),
+       sql`${tenants.status} NOT IN ('suspended', 'cancelled')`,
           ...(COLLECTION_TENANT_SLUG
             ? [eq(tenants.slug, COLLECTION_TENANT_SLUG)]
             : [inArray(tenants.name, ENTRY_ORG_NAMES)])
@@ -131,7 +131,7 @@ export async function getContext() {
           name: fallback[0].name,
           slug: fallback[0].slug,
           role: "admin",
-          viaOrg: invited && !isSuperadmin ? "Invitation" : "AXXES",
+          viaOrg: "AXXES",
         },
       ];
     }

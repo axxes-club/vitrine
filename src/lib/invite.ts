@@ -24,12 +24,14 @@ export const INVITE_COOKIE = "vitrine_invite";
 const MAX_AGE = 60 * 60 * 24 * 30; // a month is a season, not a decade
 
 function secret(): string {
-  return process.env.BETTER_AUTH_SECRET || "vitrine-local-development";
+  const value=process.env.BETTER_AUTH_SECRET;
+  if(!value || value.length<32)throw new Error("Invitation signing is not configured");
+  return value;
 }
 
-/** The codes this deployment accepts. "HOMIE" is the standing house code. */
+/** Explicitly configured invitation codes; no deployment default. */
 export function inviteCodes(): string[] {
-  const raw = process.env.VITRINE_INVITE_CODES ?? "HOMIE";
+  const raw = process.env.VITRINE_INVITE_CODES ?? "";
   return raw
     .split(",")
     .map((c) => c.trim())
@@ -59,6 +61,7 @@ export function grantFor(code: string): string {
 
 /** True when the caller presented a code this deployment issued. */
 export async function hasValidInvite(): Promise<boolean> {
+  if(!process.env.BETTER_AUTH_SECRET || process.env.BETTER_AUTH_SECRET.length<32)return false;
   const raw = (await cookies()).get(INVITE_COOKIE)?.value;
   if (!raw) return false;
   const dot = raw.lastIndexOf(".");
