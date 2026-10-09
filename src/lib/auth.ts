@@ -72,6 +72,7 @@ export const ENTRY_ORG_NAMES: string[] = (
   .filter(Boolean);
 
 const baseAuth = betterAuth({
+  disabledPaths: ["/sign-up/email"],
   baseURL,
   secret: process.env.BETTER_AUTH_SECRET,
   // Surface the shared AXXES admin flag on the session user.
@@ -101,7 +102,7 @@ const baseAuth = betterAuth({
     provider: "pg",
     schema: { user, session, account, verification },
   }),
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { enabled: true, disableSignUp: true },
   plugins: [
     nextCookies(),
     // "Continue with AXXES" — Handshake is the suite's identity provider.
