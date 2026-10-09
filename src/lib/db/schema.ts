@@ -4,6 +4,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  pgEnum,
   text,
   timestamp,
   uniqueIndex,
@@ -68,10 +69,12 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+const tenantStatus = pgEnum("tenant_status", ["active", "suspended", "pending", "cancelled"]);
 export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
+  status: tenantStatus("status").notNull().default("pending"),
   // Mapped from the shared table so a retired organization stops being an
   // entry route. Vitrine reads the same rows every other AXXES app does.
   deletedAt: timestamp("deleted_at", { withTimezone: true }),

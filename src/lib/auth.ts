@@ -1,3 +1,6 @@
+import {wrapAccountAuth} from "@/lib/security/auth-guard";
+import {sql} from "drizzle-orm";
+import {accountAllowed,accountSessionAllowed} from "@/lib/security/account.mjs";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
@@ -68,7 +71,8 @@ export const ENTRY_ORG_NAMES: string[] = (
   .map((n) => n.trim())
   .filter(Boolean);
 
-export const auth = betterAuth({
+const baseAuth = betterAuth({
+  disabledPaths: ["/sign-up/email"],
   baseURL,
   secret: process.env.BETTER_AUTH_SECRET,
   // Surface the shared AXXES admin flag on the session user.
@@ -98,7 +102,7 @@ export const auth = betterAuth({
     provider: "pg",
     schema: { user, session, account, verification },
   }),
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { enabled: true, disableSignUp: true },
   plugins: [
     nextCookies(),
     // "Continue with AXXES" — Handshake is the suite's identity provider.
@@ -124,3 +128,17 @@ export const auth = betterAuth({
       : []),
   ],
 });
+
+const accountDb={query:async(text:string,values:unknown[])=>{
+ const [id,userId]=values;
+ const result=await db.execute(text.includes('FROM "session"')
+  ?sql`SELECT id FROM "session" WHERE id=${id} AND user_id=${userId} AND expires_at>now()`
+  :sql`SELECT u.id,coalesce(p.state,'active') AS state FROM "user" u LEFT JOIN platform_subject_policy p ON p.subject_kind='user' AND p.subject_id=u.id WHERE u.id=${id}`);
+ return {rows:result.rows as Record<string,unknown>[]};
+}};
+export async function getAppSession(h:Headers){
+ const value=await auth.api.getSession({headers:h});
+ return value;
+}
+
+export const auth=wrapAccountAuth(baseAuth,(userId,sessionId)=>accountSessionAllowed(accountDb,userId,sessionId));

@@ -1,0 +1,10 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const ts=require('typescript');
+const m={exports:{}};
+const env={NODE_ENV:'production'};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/invite.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:m,exports:m.exports,process:{env},Buffer,require:id=>id==='server-only'?{}:id==='next/headers'?{cookies:async()=>({get:()=>undefined})}:require(id)});
+test('unconfigured production accepts no default invitation codes',()=>assert.deepEqual(Array.from(m.exports.inviteCodes()),[]));
+test('unconfigured production cannot sign invitation grants',()=>assert.throws(()=>m.exports.grantFor('synthetic')));
