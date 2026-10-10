@@ -2,6 +2,7 @@ import Image from "next/image";
 import { ArrowUpRight, ArrowRight, Check, ShieldCheck, Layers, FileText, MapPin, Search, LayoutGrid, List, ChevronDown, LockKeyhole, Plus } from "lucide-react";
 import { vitrinePlans, type Plan } from "@/lib/billing";
 import styles from "./landing.module.css";
+import VitrineBar, { APP_URL } from "./vitrine-bar";
 
 const works = [
   { src: "/art/candelaria-triptico-1.jpg", artist: "Efren Candelaria", title: "Tríptico uno, Panel 1", year: "2021", width: 1745, height: 1800, alt: "Abstract architectural forms in mauve, blue-green, and charcoal." },
@@ -65,18 +66,7 @@ export default async function Home() {
   return (
     <main className={styles.landing} id="top">
       <a className={styles.skipLink} href="#main-content">Skip to content</a>
-      <header className={styles.header}>
-        <a className={styles.wordmark} href="#top" aria-label="Vitrine home">vitrine<span className={styles.brandDot}>.</span></a>
-        <nav className={styles.nav} aria-label="Main navigation">
-          <a href="#platform">The platform</a>
-          <a href="#collection">The collection</a>
-          <a href="#membership">Membership</a>
-        </nav>
-        <div className={styles.headerActions}>
-          <a className={styles.signIn} href="/sign-in">Sign in</a>
-          <a className={styles.headerCta} href="/register">Create account <ArrowUpRight size={15} aria-hidden="true" /></a>
-        </div>
-      </header>
+      <VitrineBar />
 
       <section className={styles.hero} id="main-content" aria-labelledby="hero-heading">
         <div className={styles.heroCopy}>
@@ -145,9 +135,9 @@ export default async function Home() {
         <p className={styles.membershipNote}><LockKeyhole size={13} aria-hidden="true" /> Your collection remains yours. Export your records in CSV or JSON, on either plan.</p>
       </section>
 
-      <section className={styles.invitation} id="waitlist" aria-labelledby="invitation-heading"><p className={styles.eyebrow}>AN INVITATION TO SOMETHING EXCEPTIONAL</p><h2 id="invitation-heading">The next chapter<br />of your collection <em>starts here.</em></h2><p>Create your Vitrine account, then arrange the membership that fits your collection.</p><a className={styles.button} href="/register">Create your account <ArrowUpRight size={18} aria-hidden="true" /></a><span className={styles.invitationNote}>Already a member? <a href="/sign-in">Sign in <ArrowUpRight size={12} aria-hidden="true" /></a></span></section>
+      <section className={styles.invitation} id="waitlist" aria-labelledby="invitation-heading"><p className={styles.eyebrow}>AN INVITATION TO SOMETHING EXCEPTIONAL</p><h2 id="invitation-heading">The next chapter<br />of your collection <em>starts here.</em></h2><p>Create your Vitrine account, then arrange the membership that fits your collection.</p><a className={styles.button} href="/register">Create your account <ArrowUpRight size={18} aria-hidden="true" /></a><span className={styles.invitationNote}>Already a member? <a href={`${APP_URL}/login`}>Sign in <ArrowUpRight size={12} aria-hidden="true" /></a></span></section>
 
-      <footer className={styles.footer}><div><a className={styles.wordmark} href="#top">vitrine<span className={styles.brandDot}>.</span></a><p>For the art. For the story. For the future.</p></div><div><a href="#platform">The platform</a><a href="#membership">Membership</a><a href="/sign-in">Sign in</a></div><span>© {new Date().getFullYear()} Vitrine<br />An AXXES product</span></footer>
+      <footer className={styles.footer}><div><a className={styles.wordmark} href="#top">vitrine<span className={styles.brandDot}>.</span></a><p>For the art. For the story. For the future.</p></div><div><a href="#platform">The platform</a><a href="#membership">Membership</a><a href={`${APP_URL}/login`}>Sign in</a></div><span>© {new Date().getFullYear()} Vitrine<br />An AXXES product</span></footer>
     </main>
   );
 }

@@ -1,0 +1,232 @@
+/* The AXXES bar (axxes.app), in Vitrine's palette and type. Same geometry: a
+   floating frosted bar that stays on screen, pill controls, a finder on "/". */
+
+/* The spacing lives on a wrapper so it cannot collapse out of the page. */
+.wrap {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 14px 14px 0;
+  pointer-events: none;
+}
+.bar {
+  pointer-events: auto;
+  margin: 0 auto;
+  width: min(1380px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 8px 8px 8px 24px;
+  border-radius: 999px;
+  background: rgba(247, 245, 239, 0.95);
+  border: 1px solid var(--line, #dddcd2);
+  backdrop-filter: saturate(1.4) blur(22px);
+  -webkit-backdrop-filter: saturate(1.4) blur(22px);
+  box-shadow: 0 10px 30px -18px rgba(37, 40, 32, 0.28);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.brand {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.055em;
+  color: var(--ink, #252820);
+  white-space: nowrap;
+  padding-bottom: 3px;
+}
+.brand span {
+  color: var(--brass, #8c7955);
+}
+
+.nav {
+  display: flex;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--soft, #6b6b60);
+  margin-right: auto;
+}
+.nav a {
+  padding: 8px 14px;
+  border-radius: 999px;
+  transition: color 160ms ease, background 160ms ease;
+}
+.nav a:hover {
+  color: var(--ink, #252820);
+  background: rgba(140, 121, 85, 0.1);
+}
+
+.find {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  min-width: 230px;
+  padding: 0 8px 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line, #dddcd2);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--soft, #6b6b60);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+.find:hover {
+  border-color: var(--brass, #8c7955);
+  color: var(--ink, #252820);
+}
+.find kbd {
+  margin-left: auto;
+  min-width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line, #dddcd2);
+  border-radius: 6px;
+  font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--soft, #6b6b60);
+  background: var(--paper, #f7f5ef);
+}
+
+.signIn {
+  font-size: 13px;
+  padding: 0 6px;
+  color: var(--ink, #252820);
+  white-space: nowrap;
+  transition: color 160ms ease;
+}
+.signIn:hover {
+  color: var(--brass, #8c7955);
+}
+
+.account {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--ink, #252820);
+  color: var(--paper, #f7f5ef) !important;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 160ms ease;
+}
+.account:hover {
+  background: var(--brass, #8c7955);
+}
+
+/* The finder */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 14vh 16px 16px;
+  background: rgba(37, 40, 32, 0.28);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fade 160ms ease-out;
+}
+.finder {
+  width: min(620px, 100%);
+  background: var(--paper, #f7f5ef);
+  border: 1px solid var(--line, #dddcd2);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px -30px rgba(37, 40, 32, 0.5);
+  animation: rise 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.finder input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line, #dddcd2);
+  background: none;
+  color: var(--ink, #252820);
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 22px;
+  padding: 20px 24px;
+  outline: none;
+}
+.finder input::placeholder {
+  color: #a3a194;
+}
+.finder ul {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  max-height: min(420px, 55vh);
+  overflow: auto;
+}
+.finder li a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  color: var(--ink, #252820);
+}
+.finder li a span {
+  display: grid;
+  gap: 2px;
+}
+.finder li a strong {
+  font-weight: 500;
+  font-size: 15px;
+}
+.finder li a em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--soft, #6b6b60);
+}
+.finder li[aria-selected="true"] a {
+  background: var(--ink, #252820);
+  color: var(--paper, #f7f5ef);
+}
+.finder li[aria-selected="true"] a em {
+  color: #c9c2ae;
+}
+.empty {
+  padding: 18px 14px;
+  color: var(--soft, #6b6b60);
+  font-size: 14px;
+}
+.keys {
+  display: flex;
+  gap: 18px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--line, #dddcd2);
+  font-size: 11px;
+  color: var(--soft, #6b6b60);
+}
+.keys span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scrim, .finder { animation: none; }
+}
+
+@media (max-width: 900px) {
+  .nav { display: none; }
+  .find { min-width: 0; margin-left: auto; }
+  .find span, .find kbd { display: none; }
+}
+@media (max-width: 520px) {
+  .bar { gap: 10px; padding-left: 18px; }
+  .brand { font-size: 26px; }
+  .signIn { display: none; }
+}
